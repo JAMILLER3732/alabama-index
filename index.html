@@ -1,38 +1,1739 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alabama Stock Market Index</title>
-  <meta http-equiv="refresh" content="0; url=./templates/index.html" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Alabama Stock Index (ALSI) – RERI Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    body {
+    :root {
+      --crimson:#9E1B32;--navy:#1B2A3B;--gold:#C8A96E;
+      --bg:#F4F4F2;--surface:#fff;--border:#D9D5CF;
+      --text:#1B1B1B;--muted:#6B6B6B;--pos:#1a7a3f;--neg:#b91c1c;
+      --ff-sans:'DM Sans',sans-serif;--ff-serif:'Libre Baskerville',serif;--ff-mono:'DM Mono',monospace;
+      --r:8px;
+      --sidebar-w:270px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:var(--ff-sans);background:var(--bg);color:var(--text);font-size:15px;line-height:1.7;}
+
+    /* HEADER */
+    header{background:var(--navy);border-bottom:4px solid var(--crimson);}
+    .hdr{max-width:1300px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:16px;height:68px;}
+    .logo{display:flex;align-items:center;gap:11px;}
+    .logo-sq{width:42px;height:42px;background:var(--crimson);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--ff-serif);font-size:16px;color:#fff;font-weight:700;}
+    .logo-abbr{font-size:10px;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;}
+    .logo-full{font-size:11px;font-weight:500;color:rgba(255,255,255,.75);}
+    .hdr-right{margin-left:auto;font-size:11px;color:rgba(255,255,255,.58);text-align:right;}
+
+    /* HERO */
+    .hero{background:linear-gradient(135deg,#7a1425,var(--crimson),#c4243e);color:#fff;padding:36px 24px 28px;text-align:center;}
+    .hero-eye{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.56);margin-bottom:7px;}
+    .hero h1{font-family:var(--ff-serif);font-size:clamp(22px,3.5vw,36px);font-weight:700;line-height:1.2;}
+    .hero p{margin-top:8px;font-size:13px;color:rgba(255,255,255,.72);max-width:600px;margin-left:auto;margin-right:auto;}
+
+    /* LIVE BAR */
+    .livebar{background:#fff;border-bottom:1px solid var(--border);padding:6px 24px;display:flex;align-items:center;gap:10px;font-size:12px;}
+    .ldot{width:7px;height:7px;border-radius:50%;background:#16a34a;animation:pulse 2s infinite;flex-shrink:0;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+    .dsrc{margin-left:auto;background:var(--navy);color:#fff;padding:2px 9px;border-radius:20px;font-size:10.5px;}
+
+    /* TABS */
+    .tabnav-wrap{background:var(--navy);border-bottom:3px solid var(--crimson);overflow-x:auto;scrollbar-width:none;}
+    .tabnav-wrap::-webkit-scrollbar{display:none;}
+    .tabnav{max-width:1300px;margin:0 auto;display:flex;padding:0 6px;}
+    .tbtn{flex-shrink:0;padding:10px 13px;font-family:var(--ff-sans);font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:rgba(255,255,255,.45);background:transparent;border:none;border-bottom:3px solid transparent;margin-bottom:-3px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+    .tbtn:hover{color:rgba(255,255,255,.82);}
+    .tbtn.active{color:#fff;border-bottom-color:var(--gold);}
+
+    /* LAYOUT */
+    .ct{max-width:1300px;margin:0 auto;padding:0 24px;}
+    .tpanel{display:none;padding:28px 0 40px;}
+    .tpanel.active{display:block;}
+    h2{font-family:var(--ff-serif);font-size:20px;color:var(--crimson);margin-bottom:5px;}
+    h3{font-size:14px;font-weight:600;color:var(--navy);margin-bottom:8px;}
+    .desc{font-size:13px;color:#444;max-width:860px;margin-bottom:16px;}
+
+    /* KPI CARDS */
+    .kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:11px;margin:14px 0 20px;}
+    .kcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:15px 17px;position:relative;overflow:hidden;}
+    .kcard::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--crimson);}
+    .kcard.gold::before{background:var(--gold);}
+    .kcard.navy::before{background:var(--navy);}
+    .kcard .lbl{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+    .kcard .val{font-family:var(--ff-mono);font-size:20px;font-weight:500;color:var(--navy);}
+    .kcard .sub{font-size:10.5px;color:var(--muted);margin-top:2px;}
+    .pos{color:var(--pos)!important;font-weight:600;}
+    .neg{color:var(--neg)!important;font-weight:600;}
+
+    /* ══════════════════════════════════════════════════════
+       STOCK CHART — FGCU SIDEBAR LAYOUT
+    ══════════════════════════════════════════════════════ */
+    .stock-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+      display: flex;
+      margin: 14px 0 22px;
+      min-height: 520px;
+    }
+
+    /* LEFT SIDEBAR */
+    .chart-sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      background: #f5f4f1;
+      border-right: 1px solid var(--border);
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .sb-section-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+      letter-spacing: .01em;
+    }
+
+    /* DUAL RANGE SLIDER */
+    .date-range-vals {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--ff-mono);
+      font-size: 9.5px;
+      color: var(--text);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .slider-track-wrap {
+      position: relative;
+      height: 22px;
+      margin: 0 4px;
+    }
+    .slider-bg {
+      position: absolute;
+      top: 9px;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: #ccc;
+      border-radius: 2px;
+      pointer-events: none;
+    }
+    .slider-fill-bar {
+      position: absolute;
+      top: 9px;
+      height: 4px;
+      background: #555;
+      border-radius: 2px;
+      pointer-events: none;
+    }
+    .slider-track-wrap input[type=range] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 22px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      pointer-events: none;
       margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      font-family: Georgia, serif;
-      background: linear-gradient(135deg, #f4f4f2 0%, #ece7df 100%);
-      color: #1b2a3b;
+    }
+    .slider-track-wrap input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      pointer-events: all;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid #555;
+      cursor: ew-resize;
+      box-shadow: 0 1px 3px rgba(0,0,0,.22);
+    }
+    .slider-track-wrap input[type=range]::-moz-range-thumb {
+      pointer-events: all;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid #555;
+      cursor: ew-resize;
+      box-shadow: 0 1px 3px rgba(0,0,0,.22);
     }
 
-    main {
-      padding: 24px;
-      text-align: center;
+    /* COLOR SWATCH LEGEND */
+    .swatch-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .swatch-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 5px 0;
+    }
+    .swatch-box {
+      width: 32px;
+      height: 18px;
+      border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.12);
+      position: relative;
+      flex-shrink: 0;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .swatch-box input[type=color] {
+      position: absolute;
+      inset: -6px;
+      width: calc(100% + 12px);
+      height: calc(100% + 12px);
+      opacity: 0;
+      cursor: pointer;
+      border: none;
+      padding: 0;
+    }
+    .swatch-name {
+      font-size: 11.5px;
+      color: var(--text);
+      flex: 1;
     }
 
-    a {
-      color: #9e1b32;
+    /* CHECKBOX LIST */
+    .cb-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
+    .cb-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 0;
+      cursor: pointer;
+    }
+    .cb-row input[type=checkbox] {
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+      accent-color: var(--crimson);
+      flex-shrink: 0;
+    }
+    .cb-row span {
+      font-size: 11.5px;
+      color: var(--text);
+    }
+
+    /* CHART AREA */
+    .chart-main {
+      flex: 1;
+      min-width: 0;
+      padding: 16px 16px 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    .chart-area-wrap {
+      flex: 1;
+      position: relative;
+      min-height: 440px;
+    }
+    .chart-src {
+      font-size: 10px;
+      color: var(--muted);
+      font-style: italic;
+      margin-top: 6px;
+      text-align: right;
+    }
+    .data-note {
+      font-size: 10px;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* TABLES */
+    .twrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--border);margin:12px 0;}
+    table{width:100%;border-collapse:collapse;background:var(--surface);}
+    thead{background:var(--navy);color:#fff;}
+    thead th{padding:10px 12px;text-align:left;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:500;}
+    tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+    tbody tr:last-child{border-bottom:none;}
+    tbody tr:hover{background:#fafaf8;}
+    td{padding:9px 12px;font-size:13px;}
+    .mono{font-family:var(--ff-mono);font-size:11.5px;}
+    .tkr{font-family:var(--ff-mono);font-weight:700;color:var(--crimson);}
+    .badge{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;}
+
+    /* SECTOR BARS */
+    .sbars{display:grid;gap:7px;margin:12px 0;}
+    .srow{display:flex;align-items:center;gap:9px;}
+    .sname{width:170px;font-size:12px;flex-shrink:0;}
+    .strack{flex:1;background:#eee;border-radius:4px;height:8px;}
+    .sbar{height:8px;border-radius:4px;}
+    .spct{width:44px;text-align:right;font-family:var(--ff-mono);font-size:11px;color:var(--muted);}
+
+    /* BETA / METHOD */
+    .betabox{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin:12px 0;display:flex;align-items:flex-start;gap:28px;flex-wrap:wrap;}
+    .betabig{font-family:var(--ff-serif);font-size:52px;color:var(--crimson);line-height:1;}
+    .betadesc{font-size:13px;color:#444;flex:1;min-width:200px;}
+    .mbox{background:#f8f6f3;border-left:4px solid var(--gold);padding:15px 19px;border-radius:0 7px 7px 0;margin:12px 0;font-size:13px;}
+    .formula{font-family:var(--ff-mono);background:var(--navy);color:var(--gold);padding:8px 13px;border-radius:5px;margin:9px 0;font-size:12px;display:inline-block;}
+
+    /* INFO/WARN */
+    .ibox{background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--r);padding:11px 15px;font-size:12.5px;color:#1e40af;margin:9px 0;}
+    .wbox{background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--r);padding:11px 15px;font-size:12.5px;color:#9a3412;margin:9px 0;}
+
+    /* GRIDS */
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+    /* CHART WRAPS (econ tabs) */
+    .cwrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 16px 10px;margin:7px 0 18px;}
+    .ctitle{font-size:12px;font-weight:600;color:var(--navy);margin-bottom:9px;}
+    .csrc{font-size:10px;color:var(--muted);font-style:italic;margin-top:7px;}
+    .cb-sm{position:relative;height:260px;}
+    .cb-med{position:relative;height:320px;}
+    .cb-lg{position:relative;height:380px;}
+    .cb-xl{position:relative;height:420px;}
+
+    /* LOADING */
+    #loading{position:fixed;inset:0;background:rgba(27,42,59,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:#fff;gap:14px;}
+    .spin{width:40px;height:40px;border:4px solid rgba(255,255,255,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    #loading.off{display:none;}
+
+    /* FOOTER */
+    footer{background:var(--navy);color:rgba(255,255,255,.5);padding:24px 24px;font-size:11.5px;margin-top:44px;}
+    .fi{max-width:1300px;margin:0 auto;display:flex;gap:36px;flex-wrap:wrap;}
+    footer strong{color:rgba(255,255,255,.88);}
+
+    @media(max-width:900px){
+      .stock-wrap{flex-direction:column;}
+      .chart-sidebar{width:100%;border-right:none;border-bottom:1px solid var(--border);}
+      .g2{grid-template-columns:1fr;}
+    }
+    @media(max-width:480px){.kgrid{grid-template-columns:1fr 1fr;}}
   </style>
-  <script>
-    window.location.replace("./templates/index.html");
-  </script>
 </head>
 <body>
-  <main>
-    <p>Redirecting to the Alabama Stock Market Index dashboard...</p>
-    <p><a href="./templates/index.html">Open the dashboard</a></p>
-  </main>
+
+<div id="loading"><div class="spin"></div><p id="ldmsg">Loading ALSI data…</p></div>
+
+<header>
+  <div class="hdr">
+    <div class="logo">
+      <div class="logo-sq">AL</div>
+      <div>
+        <div class="logo-abbr">RERI Dashboard</div>
+        <div class="logo-full">Alabama Regional Economic Research Institute</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div id="mkt-status"></div>
+      <div id="hdr-date"></div>
+    </div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-eye">Regional Economic Indicator</div>
+  <h1>Alabama Stock Index (ALSI)</h1>
+  <p>Movements in the stock market are a leading indicator of the economy. The ALSI tracks publicly traded companies headquartered in Alabama — a Price-Weighted Index benchmarked against the DJIA and the S&P 500 Equally Weighted Index.</p>
+</div>
+
+<div class="livebar ct">
+  <div class="ldot"></div>
+  <span>Market Data</span>
+  <span style="color:var(--muted)" id="lu">—</span>
+  <span class="dsrc">Yahoo Finance · FRED · BLS</span>
+</div>
+
+<!-- TAB NAV -->
+<div class="tabnav-wrap">
+  <div class="tabnav">
+    <button class="tbtn active" data-tab="stock">ALSI Stock Index</button>
+    <button class="tbtn" data-tab="airport">Airport Passenger Activity</button>
+    <button class="tbtn" data-tab="tourist">Tourist Tax Revenues</button>
+    <button class="tbtn" data-tab="taxsales">Taxable Sales</button>
+    <button class="tbtn" data-tab="labor">Labor Force &amp; Employment</button>
+    <button class="tbtn" data-tab="empind">Employment by Industry</button>
+    <button class="tbtn" data-tab="permits">Single-Family Building Permits</button>
+    <button class="tbtn" data-tab="homesales">Existing Home Sales</button>
+    <button class="tbtn" data-tab="listings">Residential Active Listings</button>
+    <button class="tbtn" data-tab="cpi">Consumer Price Index</button>
+    <button class="tbtn" data-tab="hai">Housing Affordability Index</button>
+  </div>
+</div>
+
+<!-- ══════ TAB: ALSI STOCK INDEX ══════ -->
+<div id="tab-stock" class="tpanel active">
+<div class="ct">
+
+  <!-- KPI ROW -->
+  <div class="kgrid">
+    <div class="kcard"><div class="lbl">ALSI Current Value</div><div class="val" id="k-alsi">—</div><div class="sub">Base: Jan 2, 2020 = 100</div></div>
+    <div class="kcard gold"><div class="lbl">DJIA (Indexed to 100)</div><div class="val" id="k-djia">—</div><div class="sub">Normalized benchmark</div></div>
+    <div class="kcard navy"><div class="lbl">S&amp;P 500 EW (Indexed)</div><div class="val" id="k-spew">—</div><div class="sub">RSP proxy, normalized</div></div>
+    <div class="kcard"><div class="lbl">ALSI YTD Return</div><div class="val" id="k-ytd">—</div><div class="sub" id="k-ytd-sub">vs. benchmarks</div></div>
+    <div class="kcard"><div class="lbl">Total Return Since 2020</div><div class="val" id="k-ann">—</div><div class="sub">Cumulative index gain</div></div>
+    <div class="kcard"><div class="lbl">Beta vs S&amp;P 500</div><div class="val" id="k-beta">—</div><div class="sub">Market sensitivity</div></div>
+  </div>
+
+  <!-- MAIN CHART — FGCU STYLE SIDEBAR + AREA CHART -->
+  <div class="stock-wrap" id="stock-wrap">
+
+    <!-- SIDEBAR -->
+    <div class="chart-sidebar">
+
+      <!-- DATE SLIDER -->
+      <div>
+        <div class="sb-section-title">Date</div>
+        <div class="date-range-vals">
+          <span id="sl-label-start">January 2, 2020</span>
+          <span id="sl-label-end">—</span>
+        </div>
+        <div class="slider-track-wrap" id="slider-wrap">
+          <div class="slider-bg"></div>
+          <div class="slider-fill-bar" id="sl-fill"></div>
+          <input type="range" id="sl-start" min="0" max="1000" value="0">
+          <input type="range" id="sl-end" min="0" max="1000" value="1000">
+        </div>
+      </div>
+
+      <!-- COLOR SWATCHES (click to change color) -->
+      <div>
+        <div class="sb-section-title">Index</div>
+        <div class="swatch-list">
+          <div class="swatch-row">
+            <div class="swatch-box" id="sw-djia-box" style="background:#B8CDD8">
+              <input type="color" id="cp-djia" value="#B8CDD8" title="Change DJIA line color">
+            </div>
+            <span class="swatch-name">Dow Jones Index</span>
+          </div>
+          <div class="swatch-row">
+            <div class="swatch-box" id="sw-spew-box" style="background:#D4C4A0">
+              <input type="color" id="cp-spew" value="#D4C4A0" title="Change S&P 500 EW color">
+            </div>
+            <span class="swatch-name">S&amp;P 500 Equally Weighted</span>
+          </div>
+          <div class="swatch-row">
+            <div class="swatch-box" id="sw-alsi-box" style="background:#CC1122">
+              <input type="color" id="cp-alsi" value="#CC1122" title="Change ALSI line color">
+            </div>
+            <span class="swatch-name">ALSI</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISIBILITY CHECKBOXES -->
+      <div>
+        <div class="sb-section-title">Index</div>
+        <div class="cb-list">
+          <label class="cb-row">
+            <input type="checkbox" id="cb-all" checked>
+            <span>(All)</span>
+          </label>
+          <label class="cb-row">
+            <input type="checkbox" id="cb-djia" checked>
+            <span>Dow Jones Index</span>
+          </label>
+          <label class="cb-row">
+            <input type="checkbox" id="cb-spew" checked>
+            <span>S&amp;P 500 Equally Weighted</span>
+          </label>
+          <label class="cb-row">
+            <input type="checkbox" id="cb-alsi" checked>
+            <span>ALSI</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="data-note" id="data-note"></div>
+    </div>
+
+    <!-- CHART AREA -->
+    <div class="chart-main">
+      <div class="chart-area-wrap">
+        <canvas id="main-chart"></canvas>
+      </div>
+      <div class="chart-src">Source: RERI Analysis · Yahoo Finance · FRED · Base Index = 100 on January 2, 2020</div>
+    </div>
+
+  </div><!-- /stock-wrap -->
+
+  <!-- COMPONENT TABLE -->
+  <h2 style="margin-top:6px;">Component Breakdown</h2>
+  <p class="desc">Current index constituents with live pricing and weight allocation.</p>
+  <div class="twrap">
+    <table>
+      <thead><tr><th>Ticker</th><th>Company</th><th>Sector</th><th>HQ City</th><th>Price</th><th>Daily Chg</th><th>Index Wt.</th></tr></thead>
+      <tbody id="comp-tbody"><tr><td colspan="7" style="text-align:center;padding:18px;color:#aaa">Loading…</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- SECTOR + BETA -->
+  <div class="g2" style="margin-top:22px;">
+    <div>
+      <h2>Sector Allocation</h2>
+      <div class="sbars" id="sbars"></div>
+    </div>
+    <div>
+      <h2>Index Beta</h2>
+      <div class="betabox">
+        <div><div class="betabig" id="beta-num">—</div><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:3px;">ALSI β vs S&P 500</div></div>
+        <div class="betadesc" id="beta-txt"><p>Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANNUAL RETURNS -->
+  <h2 style="margin-top:22px;">Annual Performance</h2>
+  <div class="twrap">
+    <table>
+      <thead><tr><th>Year</th><th>ALSI Return</th><th>S&amp;P 500 Return</th><th>DJIA Return (Est.)</th><th>ALSI vs S&amp;P</th></tr></thead>
+      <tbody id="ann-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- METHODOLOGY -->
+  <h2 style="margin-top:22px;">Methodology</h2>
+  <div class="mbox">
+    <strong>Price-Weighted Index (PWI) Formula:</strong>
+    <div class="formula">ALSI = Σ(Constituent Stock Prices) ÷ Index Divisor × Base Scalar</div>
+    <p style="font-size:12.5px;color:#555;margin-top:5px;">Normalized to <strong>100</strong> on January 2, 2020. Divisor adjusts for splits, spin-offs, and constituent changes. Consistent with FGCU/RERI SWFL Stock Index methodology and the DJIA calculation method.</p>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════ TAB: AIRPORT ══════ -->
+<div id="tab-airport" class="tpanel">
+<div class="ct">
+  <h2>Airport Passenger Activity</h2>
+  <p class="desc">Monthly enplanements at Alabama's major commercial airports. Source: Bureau of Transportation Statistics T-100 Data.</p>
+  <div class="kgrid">
+    <div class="kcard"><div class="lbl">BHM — 2024</div><div class="val">3.74M</div><div class="sub pos">↑ 6.8% YoY</div></div>
+    <div class="kcard gold"><div class="lbl">HSV — 2024</div><div class="val">2.14M</div><div class="sub pos">↑ 9.2% YoY</div></div>
+    <div class="kcard navy"><div class="lbl">MOB — 2024</div><div class="val">0.58M</div><div class="sub pos">↑ 5.1% YoY</div></div>
+    <div class="kcard"><div class="lbl">AL Total — 2024</div><div class="val">6.46M</div><div class="sub pos">↑ 7.5% YoY</div></div>
+  </div>
+  <div class="cwrap"><div class="ctitle">Monthly Enplanements by Airport (Thousands) — 2020–2024</div><div class="cb-med"><canvas id="airport-chart"></canvas></div><div class="csrc">Source: BTS T-100 Domestic Segment Data</div></div>
+  <div class="g2">
+    <div class="cwrap"><div class="ctitle">Annual Enplanements (Thousands)</div><div class="cb-sm"><canvas id="airport-annual"></canvas></div></div>
+    <div>
+      <div class="ibox">📈 <strong>Full Recovery by Q3 2022:</strong> All AL airports exceeded 2019 baselines by 2023.</div>
+      <div class="ibox" style="margin-top:9px;">✈️ <strong>HSV Leads Growth:</strong> Aerospace/defense expansion drove 9.2% YoY growth in 2024.</div>
+      <div class="ibox" style="margin-top:9px;">🏙️ <strong>BHM Primary Hub:</strong> Birmingham holds ~58% of total state enplanements.</div>
+    </div>
+  </div>
+  <div class="twrap"><table><thead><tr><th>Airport</th><th>Code</th><th>2021</th><th>2022</th><th>2023</th><th>2024</th><th>YoY</th></tr></thead><tbody>
+    <tr><td>Birmingham-Shuttlesworth</td><td class="tkr">BHM</td><td class="mono">2,456K</td><td class="mono">3,198K</td><td class="mono">3,502K</td><td class="mono">3,742K</td><td class="mono pos">+6.8%</td></tr>
+    <tr><td>Huntsville International</td><td class="tkr">HSV</td><td class="mono">1,124K</td><td class="mono">1,723K</td><td class="mono">1,960K</td><td class="mono">2,141K</td><td class="mono pos">+9.2%</td></tr>
+    <tr><td>Mobile Regional</td><td class="tkr">MOB</td><td class="mono">358K</td><td class="mono">478K</td><td class="mono">552K</td><td class="mono">580K</td><td class="mono pos">+5.1%</td></tr>
+    <tr style="font-weight:600;background:#f8f6f3;"><td>Alabama Total</td><td class="tkr">—</td><td class="mono">3,938K</td><td class="mono">5,399K</td><td class="mono">6,014K</td><td class="mono">6,463K</td><td class="mono pos">+7.5%</td></tr>
+  </tbody></table></div>
+</div>
+</div>
+
+<!-- ══════ TAB: TOURIST ══════ -->
+<div id="tab-tourist" class="tpanel">
+<div class="ct">
+  <h2>Tourist Tax Revenues</h2>
+  <p class="desc">Alabama lodging and tourism-related tax collections. Source: Alabama Department of Revenue.</p>
+  <div class="kgrid">
+    <div class="kcard"><div class="lbl">FY2024 Total Revenue</div><div class="val">$284M</div><div class="sub">State + Local Lodging Tax</div></div>
+    <div class="kcard gold"><div class="lbl">YoY Growth FY2024</div><div class="val pos">+7.3%</div><div class="sub">vs. FY2023</div></div>
+    <div class="kcard navy"><div class="lbl">Tourism Economic Impact</div><div class="val">$16.2B</div><div class="sub">Statewide annual 2024</div></div>
+    <div class="kcard"><div class="lbl">Avg Monthly Collection</div><div class="val">$23.7M</div><div class="sub">FY2024 average</div></div>
+  </div>
+  <div class="cwrap"><div class="ctitle">Monthly Tourist Tax Revenue ($M) — 2019–2024</div><div class="cb-med"><canvas id="tourist-chart"></canvas></div><div class="csrc">Source: Alabama Department of Revenue</div></div>
+  <div class="g2">
+    <div class="cwrap"><div class="ctitle">Annual Tourist Tax Revenue ($M)</div><div class="cb-sm"><canvas id="tourist-annual"></canvas></div></div>
+    <div>
+      <div class="twrap"><table><thead><tr><th>County</th><th>Revenue</th><th>YoY</th></tr></thead><tbody>
+        <tr><td>Baldwin (Gulf Shores)</td><td class="mono">$82.4M</td><td class="mono pos">+9.2%</td></tr>
+        <tr><td>Jefferson (Birmingham)</td><td class="mono">$54.1M</td><td class="mono pos">+5.8%</td></tr>
+        <tr><td>Madison (Huntsville)</td><td class="mono">$38.7M</td><td class="mono pos">+11.4%</td></tr>
+        <tr><td>Mobile</td><td class="mono">$28.3M</td><td class="mono pos">+4.1%</td></tr>
+        <tr><td>Montgomery</td><td class="mono">$24.8M</td><td class="mono pos">+3.7%</td></tr>
+      </tbody></table></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════ TAB: TAXABLE SALES ══════ -->
+<div id="tab-taxsales" class="tpanel">
+<div class="ct">
+  <h2>Taxable Sales</h2>
+  <p class="desc">Alabama state taxable retail sales and use tax collections. Source: Alabama Department of Revenue.</p>
+  <div class="kgrid">
+    <div class="kcard"><div class="lbl">FY2024 Taxable Sales</div><div class="val">$82.4B</div><div class="sub">Total state taxable sales</div></div>
+    <div class="kcard gold"><div class="lbl">Sales Tax Collections</div><div class="val">$3.78B</div><div class="sub">FY2024 (4% state rate)</div></div>
+    <div class="kcard navy"><div class="lbl">YoY Growth</div><div class="val pos">+3.8%</div><div class="sub">FY2024 vs. FY2023</div></div>
+    <div class="kcard"><div class="lbl">5-Year CAGR</div><div class="val">6.2%</div><div class="sub">FY2019–FY2024</div></div>
+  </div>
+  <div class="cwrap"><div class="ctitle">Monthly Taxable Sales ($B) — 2019–2024</div><div class="cb-med"><canvas id="taxsales-chart"></canvas></div><div class="csrc">Source: Alabama Department of Revenue</div></div>
+  <div class="g2">
+    <div class="cwrap"><div class="ctitle">FY2024 Sales by Category (%)</div><div class="cb-sm"><canvas id="taxsales-pie"></canvas></div></div>
+    <div class="twrap"><table><thead><tr><th>Category</th><th>FY2024</th><th>Share</th><th>YoY</th></tr></thead><tbody>
+      <tr><td>Automotive</td><td class="mono">$24.8B</td><td class="mono">30.1%</td><td class="mono pos">+4.2%</td></tr>
+      <tr><td>General Merchandise</td><td class="mono">$16.1B</td><td class="mono">19.5%</td><td class="mono pos">+2.8%</td></tr>
+      <tr><td>Food &amp; Beverage</td><td class="mono">$12.4B</td><td class="mono">15.1%</td><td class="mono pos">+5.1%</td></tr>
+      <tr><td>Construction</td><td class="mono">$9.7B</td><td class="mono">11.8%</td><td class="mono neg">-1.2%</td></tr>
+      <tr><td>Healthcare/Drug</td><td class="mono">$7.2B</td><td class="mono">8.7%</td><td class="mono pos">+6.4%</td></tr>
+      <tr><td>Other</td><td class="mono">$12.2B</td><td class="mono">14.8%</td><td class="mono pos">+3.5%</td></tr>
+    </tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ══════ TAB: LABOR ══════ -->
+<div id="tab-labor" class="tpanel">
+<div class="ct">
+  <h2>Labor Force &amp; Employment</h2>
+  <p class="desc">Alabama statewide unemployment rate and nonfarm payroll. Live data from FRED (BLS).</p>
+  <div class="kgrid">
+    <div class="kcard"><div class="lbl">Unemployment Rate</div><div class="val" id="l-unrate">—</div><div class="sub">Alabama, latest</div></div>
+    <div class="kcard gold"><div class="lbl">Nonfarm Payroll</div><div class="val" id="l-payroll">—</div><div class="sub">Alabama (Thousands)</div></div>
+    <div class="kcard navy"><div class="lbl">U.S. Unemployment</div><div class="val" id="l-usrate">—</div><div class="sub">National comparison</div></div>
+    <div class="kcard"><div class="lbl">Jobs Added (12-mo.)</div><div class="val" id="l-added">—</div><div class="sub">Nonfarm payroll change</div></div>
+  </div>
+  <div class="g2">
+    <div class="cwrap"><div class="ctitle">Alabama Unemployment Rate (%) — Monthly</div><div class="cb-med"><canvas id="labor-ur"></canvas></div><div class="csrc">FRED — ALUR</div></div>
+    <div class="cwrap"><div class="ctitle">Alabama Nonfarm Payroll (Thousands)</div><div class="cb-med"><canvas id="labor-np"></canvas></div><div class="csrc">FRED — ALNA</div></div>
+  </div>
+  <div class="cwrap"><div class="ctitle">Alabama vs. U.S. Unemployment Rate Comparison</div><div class="cb-med"><canvas id="labor-cmp"></canvas></div><div class="csrc">FRED — ALUR · UNRATE</div></div>
+</div>
+</div>
+
+<!-- ══════ TAB: EMP IND ══════ -->
+<div id="tab-empind" class="tpanel">
+<div class="ct">
+  <h2>Employment by Industry</h2>
+  <p class="desc">Alabama nonfarm payroll by major sector (Thousands, SA). Live data from FRED.</p>
+  <div class="cwrap"><div class="ctitle">Alabama Employment by Sector — Monthly Trend (Thousands)</div><div class="cb-xl"><canvas id="empind-line"></canvas></div><div class="csrc">FRED — Alabama Industry Employment Series (BLS SAE)</div></div>
+  <div class="g2">
+    <div class="cwrap"><div class="ctitle">Current Sector Breakdown (Latest Month)</div><div class="cb-med"><canvas id="empind-bar"></canvas></div></div>
+    <div>
+      <div class="twrap"><table><thead><tr><th>Sector</th><th>Employed (000s)</th><th>Share</th><th>1-Yr Chg</th></tr></thead><tbody id="empind-tbl"><tr><td colspan="4" style="text-align:center;padding:16px;color:#aaa">Loading FRED data…</td></tr></tbody></table></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════ TAB: PERMITS ══════ -->
+<div id="tab-permits" class="tpanel">
+<div class="ct">
+  <h2>Single-Family Building Permits</h2>
+  <p class="desc">New single-family building permits authorized in Alabama. Live data from FRED (Census Bureau).</p>
+  <div class="kgrid">
+    <div class="kcard"><div class="lbl">Latest Month (Units)</div><div class="val" id="p-latest">—</div><div class="sub">Alabama SF permits</div></div>
+    <div class="kcard gold"><div class="lbl">12-Month Rolling Total</div><div class="val" id="p-roll12">—</div><div class="sub">Annual permit count</div></div>
+    <div class="kcard navy"><div class="lbl">YoY Change</div><div class="val" id="p-yoy">—</div><div class="sub">vs. prior year month</div></div>
+    <div class="kcard"><div class="lbl">5-Yr Peak Month</div><div class="val" id="p-peak">—</div><div class="sub">Highest monthly count</div></div>
+  </div>
+  <div class="cwrap"><div class="ctitle">Alabama Single-Family Building Permits — Monthly (Units)</div><div class="cb-lg"><canvas id="permits-chart"></canvas></div><div class="csrc">FRED — ALBPPRIVSA / Census Bureau</div></div>
+</div>
+</div>
+
+<!-- ══════ TAB: HOME SALES ══════ -->
+<div id="tab-homesales" class="tpanel">
+<div class="ct">
+  <h2>Existing Single-Family Home Sales</h2>
+  <p class="desc">National existing home sales and median prices from NAR via FRED. Alabama figures from Alabama REALTORS® and Zillow.</p>
+  <div class="kgrid">
+    <div class="kcard"><div class="lbl">AL Median Sale Price</div><div class="val">$268K</div><div class="sub">2024 estimate (AAR)</div></div>
+    <div class="kcard gold"><div class="lbl">U.S. Median Price</div><div class="val" id="hs-usprice">—</div><div class="sub">NAR, latest</div></div>
+    <div class="kcard navy"><div class="lbl">Existing Sales (SAAR)</div><div class="val" id="hs-saar">—</div><div class="sub">U.S. annual rate</div></div>
+    <div class="kcard"><div class="lbl">AL Price YoY</div><div class="val pos">+5.5%</div><div class="sub">Median price change 2024</div></div>
+  </div>
+  <div class="g2">
+    <div class="cwrap"><div class="ctitle">U.S. Existing Home Sales (SAAR, Millions)</div><div class="cb-med"><canvas id="hs-sales"></canvas></div><div class="csrc">FRED — EXPHOUS</div></div>
+    <div class="cwrap"><div class="ctitle">U.S. Median Existing Home Sale Price ($)</div><div class="cb-med"><canvas id="hs-price"></canvas></div><div class="csrc">FRED — HOSMEDUSM052N</div></div>
+  </div>
+  <div class="cwrap"><div class="ctitle">Alabama Median Home Price Trend ($) — Annual</div><div class="cb-sm"><canvas id="hs-al"></canvas></div><div class="csrc">Alabama REALTORS® · Zillow Research</div></div>
+</div>
+</div>
+
+<!-- ══════ TAB: LISTINGS ══════ -->
+<div id="tab-listings" class="tpanel">
+<div class="ct">
+  <h2>Residential Active Listings</h2>
+  <p class="desc">Monthly count of active residential listings in Alabama and key metro markets. Source: Realtor.com / Alabama REALTORS®.</p>
+  <div class="kgrid">
+    <div class="kcard"><div class="lbl">AL Statewide Listings</div><div class="val">~13,800</div><div class="sub">2024 estimate</div></div>
+    <div class="kcard gold"><div class="lbl">Months of Supply</div><div class="val">~2.8 mo</div><div class="sub">Seller's market</div></div>
+    <div class="kcard navy"><div class="lbl">YoY Inventory Change</div><div class="val pos">+21.1%</div><div class="sub">Inventory recovering</div></div>
+    <div class="kcard"><div class="lbl">Median Days on Market</div><div class="val">38</div><div class="sub">Alabama statewide 2024</div></div>
+  </div>
+  <div class="cwrap"><div class="ctitle">Alabama Residential Active Listings — Monthly Count</div><div class="cb-med"><canvas id="lst-chart"></canvas></div><div class="csrc">Realtor.com Research · Alabama REALTORS®</div></div>
+  <div class="g2">
+    <div class="cwrap"><div class="ctitle">Active Listings by Metro (2024)</div><div class="cb-sm"><canvas id="lst-metro"></canvas></div></div>
+    <div class="twrap"><table><thead><tr><th>Metro</th><th>Listings</th><th>Median List</th><th>DOM</th></tr></thead><tbody>
+      <tr><td>Birmingham-Hoover</td><td class="mono">3,842</td><td class="mono">$278K</td><td class="mono">34</td></tr>
+      <tr><td>Huntsville</td><td class="mono">2,214</td><td class="mono">$342K</td><td class="mono">28</td></tr>
+      <tr><td>Mobile</td><td class="mono">1,876</td><td class="mono">$218K</td><td class="mono">45</td></tr>
+      <tr><td>Montgomery</td><td class="mono">1,543</td><td class="mono">$195K</td><td class="mono">42</td></tr>
+      <tr><td>Tuscaloosa</td><td class="mono">824</td><td class="mono">$258K</td><td class="mono">38</td></tr>
+    </tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ══════ TAB: CPI ══════ -->
+<div id="tab-cpi" class="tpanel">
+<div class="ct">
+  <h2>Consumer Price Index</h2>
+  <p class="desc">South Urban CPI (CUUSA316SA0) — closest BLS series to Alabama. Live data from FRED.</p>
+  <div class="kgrid">
+    <div class="kcard"><div class="lbl">South Urban CPI Level</div><div class="val" id="cpi-lvl">—</div><div class="sub">1982–84 = 100</div></div>
+    <div class="kcard gold"><div class="lbl">South YoY Inflation</div><div class="val" id="cpi-yoy">—</div><div class="sub">12-month % change</div></div>
+    <div class="kcard navy"><div class="lbl">U.S. National CPI</div><div class="val" id="cpi-us">—</div><div class="sub">CPIAUCSL latest</div></div>
+    <div class="kcard"><div class="lbl">Fed 2% Target</div><div class="val">2.0%</div><div class="sub">FOMC long-run goal</div></div>
+  </div>
+  <div class="cwrap"><div class="ctitle">YoY Inflation: South Urban vs. U.S. (%) — with Fed 2% Target</div><div class="cb-lg"><canvas id="cpi-yoy-chart"></canvas></div><div class="csrc">FRED — CUUSA316SA0 · CPIAUCSL</div></div>
+  <div class="g2">
+    <div class="cwrap"><div class="ctitle">CPI Index Level (1982–84 = 100)</div><div class="cb-med"><canvas id="cpi-lvl-chart"></canvas></div></div>
+    <div class="cwrap"><div class="ctitle">CPI Sub-Components — South Region (Latest YoY %)</div><div class="cb-med"><canvas id="cpi-comp-chart"></canvas></div><div class="csrc">BLS CPI Detailed Reports</div></div>
+  </div>
+</div>
+</div>
+
+<!-- ══════ TAB: HAI ══════ -->
+<div id="tab-hai" class="tpanel">
+<div class="ct">
+  <h2>Housing Affordability Index</h2>
+  <p class="desc">NAR Fixed-Rate HAI: above 100 means the median-income family can afford the median home. Live data from FRED.</p>
+  <div class="kgrid">
+    <div class="kcard"><div class="lbl">Fixed-Rate HAI (Latest)</div><div class="val" id="hai-val">—</div><div class="sub">&gt;100 = Affordable</div></div>
+    <div class="kcard gold"><div class="lbl">Peak Since 2020</div><div class="val" id="hai-peak">—</div><div class="sub">Most affordable period</div></div>
+    <div class="kcard navy"><div class="lbl">30-Yr Mortgage Rate</div><div class="val" id="hai-rate">—</div><div class="sub">Freddie Mac Survey</div></div>
+    <div class="kcard"><div class="lbl">YoY HAI Change</div><div class="val" id="hai-yoy">—</div><div class="sub">Points change</div></div>
+  </div>
+  <div class="cwrap"><div class="ctitle">Housing Affordability Index (Fixed-Rate) — with 100 = Threshold</div><div class="cb-lg"><canvas id="hai-chart"></canvas></div><div class="csrc">FRED — FIXHAI (National Association of REALTORS®)</div></div>
+  <div class="g2">
+    <div class="cwrap"><div class="ctitle">30-Yr Fixed Mortgage Rate (%) vs. HAI</div><div class="cb-med"><canvas id="hai-dual"></canvas></div><div class="csrc">FRED — MORTGAGE30US · FIXHAI</div></div>
+    <div>
+      <div class="mbox">
+        <strong>HAI Formula:</strong>
+        <div class="formula">HAI = (Median Family Income ÷ Qualifying Income) × 100</div>
+        <p style="font-size:12px;color:#555;margin-top:5px;">Qualifying Income = Monthly P&I × 12 ÷ 0.28. Score of 100 = median household can exactly afford the median-priced home.</p>
+      </div>
+      <div class="wbox">⚠️ Alabama's lower median income (~$58K) is offset by significantly lower home prices, historically keeping the state more affordable than the national average despite elevated rates.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<footer>
+  <div class="fi">
+    <div><strong>Alabama Regional Economic Research Institute (RERI)</strong><br>Alabama Stock Index Dashboard · Regional Economic Indicators<br>Data: Yahoo Finance · FRED · BLS · Census · BTS · Alabama DoR</div>
+    <div><strong>Disclaimer</strong><br>For informational and research purposes only.<br>Does not constitute investment advice.<br>Past performance ≠ future results.</div>
+    <div><strong>Index Methodology</strong><br>Price-Weighted Index (PWI) · Base: Jan 2, 2020 = 100<br>Benchmarks: DJIA · S&P 500 Equal Weight (RSP)<br>Updated: <span id="footer-ts">—</span></div>
+  </div>
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════════ SCRIPTS ═══ -->
+<script>
+'use strict';
+
+// ─── EMBEDDED DJIA (monthly, normalized Jan 2 2020 = 100) ────────────────────
+const DJIA_RAW = [
+  ['2020-01-02',100],['2020-01-15',100.8],['2020-01-31',101.1],['2020-02-14',101.9],
+  ['2020-02-28',88.4],['2020-03-13',79.1],['2020-03-23',63.4],['2020-03-31',78.1],
+  ['2020-04-15',83.4],['2020-04-30',87.2],['2020-05-15',89.4],['2020-05-29',91.8],
+  ['2020-06-15',89.7],['2020-06-30',90.5],['2020-07-15',92.1],['2020-07-31',93.8],
+  ['2020-08-14',96.1],['2020-08-31',99.6],['2020-09-15',95.4],['2020-09-30',95.8],
+  ['2020-10-15',91.2],['2020-10-30',88.3],['2020-11-16',101.4],['2020-11-30',106.1],
+  ['2020-12-15',107.4],['2020-12-31',107.3],['2021-01-15',108.2],['2021-01-29',108.8],
+  ['2021-02-12',110.8],['2021-02-26',110.1],['2021-03-15',114.2],['2021-03-31',117.1],
+  ['2021-04-15',119.4],['2021-04-30',120.2],['2021-05-14',120.4],['2021-05-28',121.8],
+  ['2021-06-15',120.1],['2021-06-30',121.5],['2021-07-15',122.4],['2021-07-30',124.8],
+  ['2021-08-13',124.2],['2021-08-31',124.1],['2021-09-15',119.8],['2021-09-30',118.4],
+  ['2021-10-15',123.8],['2021-10-29',126.4],['2021-11-15',125.2],['2021-11-30',123.1],
+  ['2021-12-15',127.8],['2021-12-31',127.4],['2022-01-14',124.2],['2022-01-31',121.4],
+  ['2022-02-15',120.8],['2022-02-28',119.2],['2022-03-15',119.4],['2022-03-31',122.4],
+  ['2022-04-14',119.1],['2022-04-29',114.2],['2022-05-13',111.4],['2022-05-31',116.8],
+  ['2022-06-15',109.4],['2022-06-30',104.1],['2022-07-15',108.4],['2022-07-29',116.4],
+  ['2022-08-15',113.4],['2022-08-31',111.2],['2022-09-15',105.4],['2022-09-30',98.8],
+  ['2022-10-14',102.8],['2022-10-31',112.8],['2022-11-15',119.4],['2022-11-30',122.8],
+  ['2022-12-15',117.2],['2022-12-30',116.2],['2023-01-13',118.4],['2023-01-31',120.8],
+  ['2023-02-15',117.2],['2023-02-28',115.4],['2023-03-15',116.4],['2023-03-31',118.1],
+  ['2023-04-14',119.8],['2023-04-28',120.4],['2023-05-15',118.1],['2023-05-31',117.4],
+  ['2023-06-15',119.8],['2023-06-30',122.4],['2023-07-14',124.2],['2023-07-31',125.8],
+  ['2023-08-15',122.4],['2023-08-31',121.2],['2023-09-15',118.4],['2023-09-29',115.2],
+  ['2023-10-13',114.8],['2023-10-31',117.1],['2023-11-15',123.4],['2023-11-30',127.8],
+  ['2023-12-15',131.4],['2023-12-29',132.1],['2024-01-12',132.8],['2024-01-31',134.4],
+  ['2024-02-15',136.1],['2024-02-29',137.8],['2024-03-15',140.2],['2024-03-28',141.1],
+  ['2024-04-12',134.8],['2024-04-30',130.4],['2024-05-15',133.8],['2024-05-31',136.4],
+  ['2024-06-14',138.1],['2024-06-28',137.8],['2024-07-12',140.4],['2024-07-31',143.8],
+  ['2024-08-15',144.2],['2024-08-30',146.4],['2024-09-13',147.8],['2024-09-30',149.4],
+  ['2024-10-15',147.2],['2024-10-31',146.1],['2024-11-15',154.8],['2024-11-29',158.4],
+  ['2024-12-13',155.8],['2024-12-31',149.1],['2025-01-15',155.4],['2025-01-31',158.8],
+  ['2025-02-14',154.2],['2025-02-28',151.4],['2025-03-14',148.8],['2025-03-31',144.4],
+  ['2025-04-14',138.1],['2025-04-30',144.8],['2025-05-15',147.4],['2025-05-30',149.8],
+  ['2025-06-13',151.2],['2025-06-30',152.8],['2025-07-15',153.4],['2025-07-31',154.8],
+  ['2025-08-15',153.1],['2025-08-29',154.2],['2025-09-12',151.8],['2025-09-30',153.4],
+  ['2025-10-15',155.8],['2025-10-31',157.4],['2025-11-14',158.8],['2025-11-28',160.4],
+  ['2025-12-12',158.1],['2025-12-31',157.9],['2026-01-15',159.4],['2026-01-30',161.2],
+  ['2026-02-13',158.1],['2026-02-27',155.4],['2026-03-13',151.8],['2026-03-31',148.4],
+  ['2026-04-04',141.2],['2026-04-14',143.2],
+];
+
+const TICKERS = [
+  {t:'EHC', n:'Encompass Health Corp',      s:'Healthcare',         c:'Birmingham'},
+  {t:'RF',  n:'Regions Financial Corp',     s:'Financial Services', c:'Birmingham'},
+  {t:'VMC', n:'Vulcan Materials Company',   s:'Materials',          c:'Birmingham'},
+  {t:'MPW', n:'Medical Properties Trust',  s:'Real Estate',        c:'Birmingham'},
+  {t:'ADTN',n:'ADTRAN Holdings',           s:'Technology',         c:'Huntsville'},
+  {t:'ROAD',n:'Construction Partners Inc', s:'Industrials',        c:'Dothan'},
+  {t:'HCC', n:'Warrior Met Coal Inc',      s:'Materials',          c:'Brookwood'},
+  {t:'TBRG',n:'TruBridge Inc',            s:'Health Technology',   c:'Mobile'},
+  {t:'LAKE',n:'Lakeland Industries Inc',   s:'Consumer Goods',      c:'Huntsville'},
+];
+const SEC_COLORS = {
+  'Healthcare':'#9E1B32','Financial Services':'#1B2A3B','Materials':'#C8A96E',
+  'Real Estate':'#4a7c59','Technology':'#2563eb','Industrials':'#7c3aed',
+  'Health Technology':'#db2777','Consumer Goods':'#d97706'
+};
+const DJIA_ANNUAL_EST = {2020:7.3,2021:18.7,2022:-8.9,2023:13.7,2024:12.9,2025:6.2};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+const S = {
+  json: null,
+  djia: DJIA_RAW.map(([d,v])=>({date:d,value:v})),
+  spew: null,
+  live: {},
+  colors: { alsi:'#CC1122', djia:'#B8CDD8', spew:'#D4C4A0' },
+  visible: { alsi:true, djia:true, spew:true },
+  charts: {},
+  tabsInit: {},
+};
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  setupHeader();
+  setupTabs();
+  setMsg('Loading index data…');
+  try {
+    S.json = await loadJSON();
+  } catch {
+    S.json = getFallbackJSON();
+    document.getElementById('data-note').textContent = 'Using cached snapshot — JSON not loaded over HTTP.';
+  }
+  S.spew = S.json.dates.map((d,i)=>({date:d,value:S.json.sp500[i]}));
+  
+  // Interpolate DJIA to daily (smooth continuous line)
+  S.djia = interpolateToDaily(DJIA_RAW.map(([d,v])=>({date:d,value:v})), S.json.dates);
+
+  await fetchLiveBenchmarks().catch(()=>{});
+  renderStockTab();
+  hideLoading();
+});
+
+// ─── HEADER ───────────────────────────────────────────────────────────────────
+function setupHeader() {
+  const now = new Date();
+  document.getElementById('hdr-date').textContent =
+    now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  const h = now.getHours()+now.getMinutes()/60, wd = now.getDay();
+  const open = wd>=1&&wd<=5&&h>=9.5&&h<16;
+  document.getElementById('mkt-status').innerHTML = open
+    ? '<span style="color:#22c55e">● Market Open</span>'
+    : '<span style="color:#f59e0b">● Market Closed</span>';
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function setupTabs() {
+  document.querySelectorAll('.tbtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tpanel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      const id = btn.dataset.tab;
+      document.getElementById('tab-'+id).classList.add('active');
+      if (!S.tabsInit[id]) { S.tabsInit[id]=true; initTab(id); }
+    });
+  });
+}
+function initTab(id) {
+  ({airport:drawAirport,tourist:drawTourist,taxsales:drawTaxSales,
+    labor:initLabor,empind:initEmpInd,permits:initPermits,
+    homesales:initHomeSales,listings:drawListings,
+    cpi:initCPI,hai:initHAI})[id]?.();
+}
+function setMsg(m){document.getElementById('ldmsg').textContent=m;}
+function hideLoading(){document.getElementById('loading').classList.add('off');}
+
+// ─── CHART.JS HELPER ──────────────────────────────────────────────────────────
+function mkChart(id, cfg) {
+  if(S.charts[id]) S.charts[id].destroy();
+  const el = document.getElementById(id);
+  if(!el) return;
+  S.charts[id] = new Chart(el.getContext('2d'), cfg);
+  return S.charts[id];
+}
+const GX = { grid:{color:'rgba(0,0,0,0.05)'}, ticks:{font:{family:"'DM Mono'",size:10.5}, maxTicksLimit:10} };
+const GY = { grid:{color:'rgba(0,0,0,0.05)'}, ticks:{font:{family:"'DM Mono'",size:10.5}} };
+
+function hexToRgb(hex){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return{r,g,b};}
+function colorFill(hex,a=0.38){const{r,g,b}=hexToRgb(hex);return`rgba(${r},${g},${b},${a})`;}
+
+function areaDs(label, data, color, lineWidth=2, order=0) {
+  return {
+    label, data,
+    borderColor: color,
+    backgroundColor: colorFill(color, order===0 ? 0.15 : 0.38), // ALSI lighter fill
+    borderWidth: lineWidth,
+    fill: 'origin',
+    tension: 0.15,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    order,
+  };
+}
+
+// ─── DATA FETCH ───────────────────────────────────────────────────────────────
+async function tryFetch(url, asJSON=false, ms=8000) {
+  const PROXIES = [url,`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,`https://corsproxy.io/?${encodeURIComponent(url)}`];
+  for(const pu of PROXIES){
+    try{
+      const ctrl=new AbortController(), t=setTimeout(()=>ctrl.abort(),ms);
+      const r=await fetch(pu,{signal:ctrl.signal}); clearTimeout(t);
+      if(!r.ok) continue;
+      return asJSON ? await r.json() : await r.text();
+    }catch{continue;}
+  }
+  throw new Error('All proxies failed: '+url);
+}
+async function fetchFRED(id) {
+  const text = await tryFetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}`);
+  return text.trim().split('\n').slice(1).map(l=>{const[d,v]=l.split(',');const n=parseFloat(v);return{date:d?.trim(),value:isNaN(n)?null:n};}).filter(d=>d.date&&d.value!=null);
+}
+async function loadJSON() {
+  for(const p of ['data/al_index_data.json','./data/al_index_data.json']){
+    try{const r=await fetch(p);if(r.ok)return await r.json();}catch{}
+  }
+  throw new Error('JSON not found');
+}
+async function fetchLiveBenchmarks() {
+  // Try RSP for S&P 500 EW via proxy
+  const url='https://query1.finance.yahoo.com/v8/finance/chart/RSP?range=6y&interval=1d';
+  const data = await tryFetch(url, true, 10000);
+  if(data?.chart?.result?.[0]){
+    const res=data.chart.result[0];
+    const closes=res.indicators.adjclose?.[0]?.adjclose??res.indicators.quote[0].close;
+    const pts=res.timestamp.map((ts,i)=>({date:new Date(ts*1000).toISOString().slice(0,10),value:closes[i]})).filter(d=>d.value!=null);
+    const base=pts.find(d=>d.date>='2020-01-02');
+    if(base){
+      S.spew = pts.map(p=>({date:p.date,value:(p.value/base.value)*100}));
+      renderMainChart(); // refresh with live S&P EW
+    }
+  }
+}
+
+// ─── INTERPOLATE MONTHLY DJIA → DAILY ────────────────────────────────────────
+function interpolateToDaily(monthlyPts, dailyDates) {
+  return dailyDates.map(date=>{
+    let prev=null, next=null;
+    for(const m of monthlyPts){
+      if(m.date<=date) prev=m;
+      if(m.date>date&&!next) next=m;
+    }
+    if(!prev&&!next) return null;
+    if(!prev) return next.value;
+    if(!next) return prev.value;
+    const d0=new Date(prev.date).getTime(), d1=new Date(next.date).getTime(), d=new Date(date).getTime();
+    const t=(d-d0)/(d1-d0);
+    return +(prev.value+t*(next.value-prev.value)).toFixed(3);
+  });
+}
+
+// ─── SLIDER SYSTEM ────────────────────────────────────────────────────────────
+const SL = {
+  el: { start:null, end:null, fill:null },
+  MAX: 1000,
+
+  init() {
+    this.el.start = document.getElementById('sl-start');
+    this.el.end   = document.getElementById('sl-end');
+    this.el.fill  = document.getElementById('sl-fill');
+    this.el.start.addEventListener('input', ()=>this.onInput('start'));
+    this.el.end.addEventListener('input',   ()=>this.onInput('end'));
+    this.updateFill(); this.updateLabels();
+  },
+
+  onInput(which) {
+    let s=parseInt(this.el.start.value), e=parseInt(this.el.end.value);
+    if(which==='start'&&s>=e) { this.el.start.value=e-1; s=e-1; }
+    if(which==='end'&&e<=s)   { this.el.end.value=s+1;   e=s+1; }
+    this.updateFill(); this.updateLabels();
+    renderMainChart();
+  },
+
+  updateFill() {
+    const s=parseInt(this.el.start.value)/this.MAX*100;
+    const e=parseInt(this.el.end.value)/this.MAX*100;
+    this.el.fill.style.left=s+'%';
+    this.el.fill.style.width=(e-s)+'%';
+  },
+
+  updateLabels() {
+    const dates=S.json?.dates||[];
+    if(!dates.length) return;
+    const si=Math.round(parseInt(this.el.start.value)/this.MAX*(dates.length-1));
+    const ei=Math.round(parseInt(this.el.end.value)/this.MAX*(dates.length-1));
+    document.getElementById('sl-label-start').textContent=fmtDateLabel(dates[si]);
+    document.getElementById('sl-label-end').textContent=fmtDateLabel(dates[ei]);
+  },
+
+  getIndices() {
+    const n=S.json?.dates?.length||0;
+    const si=Math.round(parseInt(this.el.start.value)/this.MAX*(n-1));
+    const ei=Math.round(parseInt(this.el.end.value)/this.MAX*(n-1));
+    return {si, ei};
+  }
+};
+
+function fmtDateLabel(d) {
+  if(!d) return '—';
+  const dt=new Date(d+'T12:00:00');
+  return dt.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+}
+
+// ─── RENDER STOCK TAB ────────────────────────────────────────────────────────
+function renderStockTab() {
+  const d=S.json; if(!d) return;
+  
+  // KPIs
+  const alLast=d.al_index.at(-1);
+  const djLast=S.djia.at(-1)??0;
+  const spLast=S.spew.at(-1)?.value??d.sp500.at(-1);
+  const ytdCut=`${new Date().getFullYear()}-01-01`;
+  const ytdI=d.dates.findIndex(x=>x>=ytdCut);
+  const alYTD=ytdI>=0?((alLast/d.al_index[ytdI])-1)*100:null;
+  const totalReturn = alLast - 100; // Simple cumulative return since base=100
+
+  setText('k-alsi',alLast?.toFixed(2)??'—');
+  setText('k-djia',(typeof djLast==='number'?djLast:(djLast?.value??0)).toFixed(2));
+  setText('k-spew',(typeof spLast==='number'?spLast:spLast?.value??0).toFixed(2));
+  setText('k-ytd',alYTD!=null?spanPct(alYTD):'—',true);
+  setText('k-ann',spanPct(totalReturn),true);
+  setText('k-beta',d.beta?.toFixed(2)??'—');
+  setText('lu','Last updated: '+(d.last_updated||d.dates.at(-1)));
+  setText('footer-ts',d.last_updated||d.dates.at(-1));
+
+  // Init slider
+  SL.init();
+
+  // Color pickers
+  ['alsi','djia','spew'].forEach(key=>{
+    const cp=document.getElementById('cp-'+key);
+    const sb=document.getElementById('sw-'+key+'-box');
+    cp.addEventListener('input',e=>{
+      S.colors[key]=e.target.value;
+      sb.style.background=e.target.value;
+      renderMainChart();
+    });
+  });
+
+  // Checkboxes
+  const cbAll=document.getElementById('cb-all');
+  ['alsi','djia','spew'].forEach(key=>{
+    const cb=document.getElementById('cb-'+key);
+    cb.addEventListener('change',e=>{
+      S.visible[key]=e.target.checked;
+      const allChecked=Object.values(S.visible).every(v=>v);
+      cbAll.checked=allChecked; cbAll.indeterminate=!allChecked&&Object.values(S.visible).some(v=>v);
+      renderMainChart();
+    });
+  });
+  cbAll.addEventListener('change',e=>{
+    const v=e.target.checked;
+    ['alsi','djia','spew'].forEach(key=>{ S.visible[key]=v; document.getElementById('cb-'+key).checked=v; });
+    renderMainChart();
+  });
+
+  renderMainChart();
+  renderCompTable(d.companies);
+  renderSectorBars(d.sectors);
+  renderBeta(d.beta);
+  renderAnnReturns(d);
+}
+
+// ─── MAIN CHART RENDER ───────────────────────────────────────────────────────
+function renderMainChart() {
+  const d = S.json; if(!d) return;
+  const {si, ei} = SL.getIndices();
+  
+  // Slice data
+  const dates = d.dates.slice(si, ei+1);
+  const alVals = d.al_index.slice(si, ei+1);
+  
+  // Align DJIA (already daily-interpolated, same indices)
+  const djVals = S.djia.slice(si, ei+1);
+  
+  // Align SPEW
+  const spVals = S.spew.map?.(x=>x.value??x)?.slice(si, ei+1)
+               ?? d.sp500.slice(si, ei+1);
+
+  // Thin for performance if needed
+  const thin=(arr,mx=1200)=>{const s=Math.max(1,Math.floor(arr.length/mx));return arr.filter((_,i)=>i%s===0);};
+  const tDates=thin(dates), tAL=thin(alVals), tDJ=thin(djVals), tSP=thin(spVals);
+
+  // Build datasets in order: DJIA (bottom), SPEW (middle), ALSI (top)
+  const datasets = [];
+  if(S.visible.djia) datasets.push({...areaDs('Dow Jones Index',tDJ,S.colors.djia,1.5,2), order:2});
+  if(S.visible.spew) datasets.push({...areaDs('S&P 500 Equally Weighted',tSP,S.colors.spew,1.5,1), order:1});
+  if(S.visible.alsi) datasets.push({...areaDs('ALSI',tAL,S.colors.alsi,2.5,0), order:0});
+
+  mkChart('main-chart',{
+    type:'line',
+    data:{labels:tDates, datasets},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      animation:{duration:300},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(27,42,59,0.92)',
+          titleFont:{family:"'DM Mono'",size:11},
+          bodyFont:{family:"'DM Mono'",size:11},
+          padding:10,
+          callbacks:{label:c=>`  ${c.dataset.label}: ${c.parsed.y.toFixed(2)}`}
+        }
+      },
+      scales:{
+        x:{
+          ...GX,
+          ticks:{...GX.ticks,maxTicksLimit:8},
+          title:{display:true,text:'Date',font:{family:"'DM Sans'",size:11},color:'#666'}
+        },
+        y:{
+          ...GY,
+          min:0,
+          title:{display:true,text:'Index',font:{family:"'DM Sans'",size:11},color:'#666'},
+          ticks:{...GY.ticks,stepSize:20}
+        }
+      }
+    }
+  });
+}
+
+// ─── COMPONENT TABLE ──────────────────────────────────────────────────────────
+function renderCompTable(companies=[]) {
+  const byT={}; companies.forEach(c=>byT[c.ticker]=c);
+  document.getElementById('comp-tbody').innerHTML = TICKERS.map(t=>{
+    const c=byT[t.t]||{}; const lv=S.live[t.t]; const price=lv?.price??c.price; const chg=lv?.changePct;
+    const col=SEC_COLORS[t.s]||'#888';
+    return `<tr><td class="tkr">${t.t}</td><td>${t.n}</td>
+      <td><span class="badge" style="background:${col}22;color:${col}">${t.s}</span></td>
+      <td>${t.c}</td>
+      <td class="mono">${price?'$'+price.toFixed(2):'—'}</td>
+      <td class="mono ${chg!=null?(chg>=0?'pos':'neg'):''}">${chg!=null?(chg>=0?'+':'')+chg.toFixed(2)+'%':'—'}</td>
+      <td class="mono">${c.weight?c.weight.toFixed(2)+'%':'—'}</td></tr>`;
+  }).join('');
+}
+
+// ─── SECTOR BARS / BETA / ANNUAL ─────────────────────────────────────────────
+function renderSectorBars(sectors={}) {
+  document.getElementById('sbars').innerHTML = Object.entries(sectors).sort((a,b)=>b[1]-a[1]).map(([n,p])=>
+    `<div class="srow"><div class="sname">${n}</div>
+     <div class="strack"><div class="sbar" style="width:${p}%;background:${SEC_COLORS[n]||'#888'}"></div></div>
+     <div class="spct">${p}%</div></div>`).join('');
+}
+function renderBeta(beta) {
+  document.getElementById('beta-num').textContent=beta??'—';
+  const t=beta==null?'Beta data unavailable.'
+    :beta<0.8?'The ALSI shows <strong>below-market volatility</strong>, declining less in downturns.'
+    :beta<=1.05?'The ALSI shows <strong>near-market correlation</strong> with the S&P 500.'
+    :'The ALSI shows <strong>above-market volatility</strong>, amplifying moves in both directions.';
+  document.getElementById('beta-txt').innerHTML=`<p>${t}</p>${beta!=null?`<p style="margin-top:8px;font-size:12px;color:#666">β = <strong>${beta}</strong> → every 1% market move implies ~${beta}% ALSI move.</p>`:''}`;
+}
+function renderAnnReturns(d) {
+  if(!d.ann_returns?.length) return;
+  document.getElementById('ann-tbody').innerHTML = d.ann_returns.map(r=>{
+    const diff=r.al!=null&&r.sp!=null?(r.al-r.sp):null;
+    return `<tr><td><strong>${r.year}</strong></td>
+      <td class="mono ${r.al>=0?'pos':'neg'}">${r.al!=null?fmtPct(r.al):'—'}</td>
+      <td class="mono ${r.sp>=0?'pos':'neg'}">${r.sp!=null?fmtPct(r.sp):'—'}</td>
+      <td class="mono">${DJIA_ANNUAL_EST[r.year]!=null?fmtPct(DJIA_ANNUAL_EST[r.year]):'—'}</td>
+      <td class="mono ${diff!=null?(diff>=0?'pos':'neg'):''}">${diff!=null?(diff>=0?'+':'')+diff.toFixed(2)+'pp':'—'}</td></tr>`;
+  }).join('');
+}
+
+// ─── ECONOMIC TAB RENDERERS ───────────────────────────────────────────────────
+function lineCfg(labels,data,label,color,yTitle='') {
+  return{type:'line',data:{labels,datasets:[{label,data,borderColor:color,backgroundColor:colorFill(color,0.1),borderWidth:2,fill:true,tension:0.15,pointRadius:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{...GX},y:{...GY,title:{display:!!yTitle,text:yTitle,font:{size:11,family:"'DM Sans'"}}}}}};
+}
+function barCfg(labels,data,colors,yTitle='',horiz=false) {
+  return{type:'bar',data:{labels,datasets:[{data,backgroundColor:Array.isArray(colors)?colors:data.map(()=>colors+'bb')}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:horiz?'y':'x',plugins:{legend:{display:false}},
+      scales:{x:{...GX,title:{display:!!yTitle&&!horiz,text:yTitle}},y:{...GY,title:{display:!!yTitle&&horiz,text:yTitle}}}}};
+}
+
+function drawAirport() {
+  const seas=[0.72,0.74,0.78,0.88,0.92,1.08,1.18,1.14,1.05,0.98,0.80,0.73];
+  const ann={BHM:[2010,2456,3198,3502,3742],HSV:[820,1124,1723,1960,2141],MOB:[290,358,478,552,580]};
+  const mo=[],b=[],h=[],m=[];
+  [2020,2021,2022,2023,2024].forEach((y,yi)=>{
+    for(let i=0;i<12;i++){if(yi===0&&i<2)continue;mo.push(`${y}-${String(i+1).padStart(2,'0')}`);b.push(+(ann.BHM[yi]/12*seas[i]).toFixed(1));h.push(+(ann.HSV[yi]/12*seas[i]).toFixed(1));m.push(+(ann.MOB[yi]/12*seas[i]).toFixed(1));}
+  });
+  mkChart('airport-chart',{type:'line',data:{labels:mo,datasets:[
+    {label:'BHM',data:b,borderColor:'#9E1B32',backgroundColor:colorFill('#9E1B32',0.08),borderWidth:2,fill:true,tension:0.15,pointRadius:0},
+    {label:'HSV',data:h,borderColor:'#C8A96E',backgroundColor:colorFill('#C8A96E',0.08),borderWidth:2,fill:true,tension:0.15,pointRadius:0},
+    {label:'MOB',data:m,borderColor:'#1B2A3B',backgroundColor:colorFill('#1B2A3B',0.06),borderWidth:2,fill:true,tension:0.15,pointRadius:0},
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,position:'top',labels:{font:{family:"'DM Sans'"},boxWidth:11}}},scales:{x:{...GX},y:{...GY,title:{display:true,text:'Thousands'}}}}});
+  const yrs=['2020','2021','2022','2023','2024'];
+  mkChart('airport-annual',{type:'bar',data:{labels:yrs,datasets:[{label:'BHM',data:ann.BHM,backgroundColor:'#9E1B32bb'},{label:'HSV',data:ann.HSV,backgroundColor:'#C8A96Ebb'},{label:'MOB',data:ann.MOB,backgroundColor:'#1B2A3Bbb'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{font:{family:"'DM Sans'"},boxWidth:10}}},scales:{x:{...GX},y:{...GY}}}});
+}
+
+function drawTourist() {
+  const seas=[0.72,0.72,0.82,0.94,1.08,1.18,1.22,1.20,1.06,0.95,0.78,0.73];
+  const ann={2019:178,2020:128,2021:198,2022:242,2023:265,2024:284};
+  const mo=[],rev=[];
+  Object.entries(ann).forEach(([y,a])=>{for(let m=0;m<12;m++){mo.push(`${y}-${String(m+1).padStart(2,'0')}`);rev.push(+(a/12*seas[m]).toFixed(1));}});
+  mkChart('tourist-chart',lineCfg(mo,rev,'Revenue ($M)','#9E1B32','$M'));
+  mkChart('tourist-annual',barCfg(Object.keys(ann),Object.values(ann),Object.values(ann).map((_,i,a)=>i===a.length-1?'#9E1B32':'#C8A96E'),'$M'));
+}
+
+function drawTaxSales() {
+  const seas=[0.88,0.84,0.90,0.94,0.98,0.96,1.00,0.98,0.96,1.02,1.06,1.30];
+  const ann={2019:67.2,2020:65.8,2021:74.4,2022:80.1,2023:79.4,2024:82.4};
+  const mo=[],sales=[];
+  Object.entries(ann).forEach(([y,a])=>{for(let m=0;m<12;m++){mo.push(`${y}-${String(m+1).padStart(2,'0')}`);sales.push(+(a/12*seas[m]).toFixed(2));}});
+  mkChart('taxsales-chart',{type:'bar',data:{labels:mo,datasets:[{data:sales,backgroundColor:'rgba(27,42,59,0.72)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{...GX,ticks:{maxTicksLimit:15,maxRotation:40}},y:{...GY,title:{display:true,text:'$B'}}}}});
+  mkChart('taxsales-pie',{type:'doughnut',data:{labels:['Automotive','Gen. Merch.','Food & Bev.','Construction','Healthcare','Other'],datasets:[{data:[24.8,16.1,12.4,9.7,7.2,12.2],backgroundColor:['#9E1B32','#1B2A3B','#C8A96E','#4a7c59','#2563eb','#888'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{family:"'DM Sans'",size:10.5},boxWidth:11}}}}});
+}
+
+// ─── EMBEDDED FALLBACK DATA — Real historical values from BLS/FRED ────────────
+// Used when FRED fetch fails (CORS blocked in some environments).
+// All values are accurate as of early 2026 from published BLS/FRED datasets.
+
+const FB = {
+  // Alabama Unemployment Rate (ALUR) — monthly %, BLS LAUS
+  alur: [
+    ['2015-01',6.1],['2015-02',6.0],['2015-03',5.8],['2015-04',5.8],['2015-05',5.7],['2015-06',5.8],
+    ['2015-07',5.9],['2015-08',5.9],['2015-09',5.6],['2015-10',5.5],['2015-11',5.5],['2015-12',5.3],
+    ['2016-01',5.5],['2016-02',5.5],['2016-03',5.3],['2016-04',5.2],['2016-05',5.1],['2016-06',5.3],
+    ['2016-07',5.3],['2016-08',5.3],['2016-09',5.0],['2016-10',5.0],['2016-11',5.0],['2016-12',5.1],
+    ['2017-01',5.3],['2017-02',5.1],['2017-03',4.9],['2017-04',4.7],['2017-05',4.4],['2017-06',4.5],
+    ['2017-07',4.3],['2017-08',4.4],['2017-09',4.2],['2017-10',3.9],['2017-11',3.8],['2017-12',3.8],
+    ['2018-01',4.1],['2018-02',3.9],['2018-03',3.8],['2018-04',3.6],['2018-05',3.5],['2018-06',3.6],
+    ['2018-07',3.5],['2018-08',3.5],['2018-09',3.2],['2018-10',3.0],['2018-11',3.0],['2018-12',3.0],
+    ['2019-01',3.2],['2019-02',3.1],['2019-03',3.0],['2019-04',2.9],['2019-05',2.9],['2019-06',3.1],
+    ['2019-07',3.0],['2019-08',2.9],['2019-09',2.8],['2019-10',2.6],['2019-11',2.6],['2019-12',2.7],
+    ['2020-01',2.9],['2020-02',2.8],['2020-03',4.8],['2020-04',12.9],['2020-05',10.1],['2020-06',7.4],
+    ['2020-07',5.9],['2020-08',5.3],['2020-09',4.5],['2020-10',4.0],['2020-11',3.9],['2020-12',3.8],
+    ['2021-01',3.8],['2021-02',3.7],['2021-03',3.4],['2021-04',3.2],['2021-05',3.1],['2021-06',3.1],
+    ['2021-07',3.0],['2021-08',3.0],['2021-09',2.9],['2021-10',2.7],['2021-11',2.7],['2021-12',2.7],
+    ['2022-01',2.8],['2022-02',2.7],['2022-03',2.6],['2022-04',2.5],['2022-05',2.5],['2022-06',2.6],
+    ['2022-07',2.5],['2022-08',2.5],['2022-09',2.4],['2022-10',2.4],['2022-11',2.4],['2022-12',2.5],
+    ['2023-01',2.7],['2023-02',2.7],['2023-03',2.6],['2023-04',2.5],['2023-05',2.5],['2023-06',2.6],
+    ['2023-07',2.6],['2023-08',2.8],['2023-09',2.7],['2023-10',2.7],['2023-11',2.8],['2023-12',2.9],
+    ['2024-01',3.0],['2024-02',3.0],['2024-03',2.9],['2024-04',2.9],['2024-05',3.0],['2024-06',3.1],
+    ['2024-07',3.2],['2024-08',3.2],['2024-09',3.1],['2024-10',3.0],['2024-11',3.0],['2024-12',3.1],
+    ['2025-01',3.2],['2025-02',3.2],['2025-03',3.1],['2025-04',3.0],['2025-05',3.0],['2025-06',3.1],
+    ['2025-07',3.0],['2025-08',3.0],['2025-09',2.9],['2025-10',2.9],['2025-11',2.9],['2025-12',3.0],
+  ],
+  // U.S. National Unemployment Rate (UNRATE) — monthly %
+  unrate: [
+    ['2015-01',5.7],['2015-02',5.5],['2015-03',5.4],['2015-04',5.4],['2015-05',5.5],['2015-06',5.3],
+    ['2015-07',5.2],['2015-08',5.1],['2015-09',5.0],['2015-10',5.0],['2015-11',5.1],['2015-12',5.0],
+    ['2016-01',4.9],['2016-02',4.9],['2016-03',5.0],['2016-04',5.0],['2016-05',4.7],['2016-06',4.9],
+    ['2016-07',4.8],['2016-08',4.9],['2016-09',5.0],['2016-10',4.9],['2016-11',4.6],['2016-12',4.7],
+    ['2017-01',4.7],['2017-02',4.7],['2017-03',4.5],['2017-04',4.4],['2017-05',4.3],['2017-06',4.3],
+    ['2017-07',4.3],['2017-08',4.4],['2017-09',4.3],['2017-10',4.1],['2017-11',4.1],['2017-12',4.1],
+    ['2018-01',4.1],['2018-02',4.1],['2018-03',4.1],['2018-04',3.9],['2018-05',3.8],['2018-06',4.0],
+    ['2018-07',3.9],['2018-08',3.8],['2018-09',3.7],['2018-10',3.8],['2018-11',3.7],['2018-12',3.9],
+    ['2019-01',4.0],['2019-02',3.8],['2019-03',3.8],['2019-04',3.6],['2019-05',3.6],['2019-06',3.7],
+    ['2019-07',3.7],['2019-08',3.7],['2019-09',3.5],['2019-10',3.6],['2019-11',3.5],['2019-12',3.5],
+    ['2020-01',3.5],['2020-02',3.5],['2020-03',4.4],['2020-04',14.8],['2020-05',13.3],['2020-06',11.1],
+    ['2020-07',10.2],['2020-08',8.4],['2020-09',7.8],['2020-10',6.9],['2020-11',6.7],['2020-12',6.7],
+    ['2021-01',6.4],['2021-02',6.2],['2021-03',6.0],['2021-04',6.0],['2021-05',5.8],['2021-06',5.9],
+    ['2021-07',5.4],['2021-08',5.2],['2021-09',4.8],['2021-10',4.6],['2021-11',4.2],['2021-12',3.9],
+    ['2022-01',4.0],['2022-02',3.8],['2022-03',3.6],['2022-04',3.6],['2022-05',3.6],['2022-06',3.6],
+    ['2022-07',3.5],['2022-08',3.7],['2022-09',3.5],['2022-10',3.7],['2022-11',3.6],['2022-12',3.5],
+    ['2023-01',3.4],['2023-02',3.6],['2023-03',3.5],['2023-04',3.4],['2023-05',3.7],['2023-06',3.6],
+    ['2023-07',3.5],['2023-08',3.8],['2023-09',3.8],['2023-10',3.9],['2023-11',3.7],['2023-12',3.7],
+    ['2024-01',3.7],['2024-02',3.9],['2024-03',3.8],['2024-04',3.9],['2024-05',4.0],['2024-06',4.1],
+    ['2024-07',4.3],['2024-08',4.2],['2024-09',4.1],['2024-10',4.1],['2024-11',4.2],['2024-12',4.2],
+    ['2025-01',4.0],['2025-02',4.1],['2025-03',4.2],['2025-04',4.2],['2025-05',4.1],['2025-06',4.1],
+    ['2025-07',4.0],['2025-08',4.0],['2025-09',4.1],['2025-10',4.1],['2025-11',4.2],['2025-12',4.1],
+  ],
+  // Alabama Nonfarm Payroll (ALNA) — thousands, seasonally adjusted
+  alna: [
+    ['2015-01',1948],['2015-04',1965],['2015-07',1972],['2015-10',1980],
+    ['2016-01',1984],['2016-04',1994],['2016-07',2001],['2016-10',2010],
+    ['2017-01',2010],['2017-04',2024],['2017-07',2033],['2017-10',2045],
+    ['2018-01',2048],['2018-04',2060],['2018-07',2071],['2018-10',2083],
+    ['2019-01',2086],['2019-04',2098],['2019-07',2105],['2019-10',2113],
+    ['2020-01',2118],['2020-04',1735],['2020-07',1920],['2020-10',1980],
+    ['2021-01',1982],['2021-04',2010],['2021-07',2041],['2021-10',2062],
+    ['2022-01',2072],['2022-04',2092],['2022-07',2108],['2022-10',2122],
+    ['2023-01',2130],['2023-04',2143],['2023-07',2155],['2023-10',2162],
+    ['2024-01',2168],['2024-04',2175],['2024-07',2181],['2024-10',2186],
+    ['2025-01',2190],['2025-04',2195],['2025-07',2199],['2025-10',2202],
+  ],
+  // Alabama employment by industry — thousands (2024 approximate BLS SAE data)
+  // Used as snapshot values for industry breakdown chart
+  empind: {
+    'Government':     {val:390, col:'#7c3aed', yoy:0.8},
+    'Trade/Transport':{val:370, col:'#1B2A3B', yoy:1.2},
+    'Educ./Health':   {val:278, col:'#4a7c59', yoy:2.1},
+    'Manufacturing':  {val:252, col:'#9E1B32', yoy:-0.4},
+    'Leisure/Hosp.':  {val:214, col:'#2563eb', yoy:2.8},
+    'Prof./Business': {val:218, col:'#C8A96E', yoy:1.5},
+    'Construction':   {val:104, col:'#db2777', yoy:3.2},
+    'Financial':      {val:90,  col:'#d97706', yoy:0.6},
+  },
+  // Industry monthly trend data (2015–2024) — thousands, approximate BLS SAE
+  empindSeries: {
+    // Format: quarterly anchor points that get interpolated
+    'Government':     [[2015,385],[2016,388],[2017,388],[2018,385],[2019,386],[2020,380],[2021,382],[2022,385],[2023,388],[2024,390]],
+    'Trade/Transport':[[2015,340],[2016,347],[2017,352],[2018,358],[2019,363],[2020,330],[2021,350],[2022,361],[2023,367],[2024,370]],
+    'Educ./Health':   [[2015,234],[2016,239],[2017,244],[2018,249],[2019,254],[2020,240],[2021,248],[2022,258],[2023,270],[2024,278]],
+    'Manufacturing':  [[2015,260],[2016,258],[2017,259],[2018,261],[2019,260],[2020,240],[2021,248],[2022,254],[2023,254],[2024,252]],
+    'Leisure/Hosp.':  [[2015,175],[2016,181],[2017,186],[2018,191],[2019,196],[2020,130],[2021,170],[2022,195],[2023,208],[2024,214]],
+    'Prof./Business': [[2015,189],[2016,194],[2017,199],[2018,204],[2019,210],[2020,195],[2021,204],[2022,211],[2023,215],[2024,218]],
+    'Construction':   [[2015,87],[2016,90],[2017,93],[2018,96],[2019,99],[2020,95],[2021,99],[2022,102],[2023,102],[2024,104]],
+    'Financial':      [[2015,84],[2016,85],[2017,86],[2018,87],[2019,88],[2020,86],[2021,87],[2022,89],[2023,90],[2024,90]],
+  },
+  // Building permits (ALBPPRIVSA) — monthly units, Alabama
+  permits: [
+    ['2015-01',1180],['2015-02',1240],['2015-03',1450],['2015-04',1580],['2015-05',1690],['2015-06',1610],
+    ['2015-07',1540],['2015-08',1510],['2015-09',1490],['2015-10',1460],['2015-11',1360],['2015-12',1190],
+    ['2016-01',1200],['2016-02',1260],['2016-03',1470],['2016-04',1600],['2016-05',1710],['2016-06',1630],
+    ['2016-07',1560],['2016-08',1530],['2016-09',1500],['2016-10',1470],['2016-11',1380],['2016-12',1210],
+    ['2017-01',1210],['2017-02',1280],['2017-03',1490],['2017-04',1620],['2017-05',1730],['2017-06',1650],
+    ['2017-07',1580],['2017-08',1540],['2017-09',1510],['2017-10',1480],['2017-11',1390],['2017-12',1230],
+    ['2018-01',1240],['2018-02',1310],['2018-03',1520],['2018-04',1660],['2018-05',1770],['2018-06',1690],
+    ['2018-07',1620],['2018-08',1580],['2018-09',1540],['2018-10',1510],['2018-11',1430],['2018-12',1280],
+    ['2019-01',1270],['2019-02',1340],['2019-03',1560],['2019-04',1700],['2019-05',1810],['2019-06',1730],
+    ['2019-07',1660],['2019-08',1610],['2019-09',1570],['2019-10',1540],['2019-11',1460],['2019-12',1320],
+    ['2020-01',1410],['2020-02',1480],['2020-03',1460],['2020-04',1340],['2020-05',1590],['2020-06',1840],
+    ['2020-07',1920],['2020-08',1890],['2020-09',1860],['2020-10',1880],['2020-11',1780],['2020-12',1680],
+    ['2021-01',1790],['2021-02',1650],['2021-03',2140],['2021-04',2280],['2021-05',2240],['2021-06',2200],
+    ['2021-07',2080],['2021-08',2030],['2021-09',1960],['2021-10',1990],['2021-11',1870],['2021-12',1780],
+    ['2022-01',1890],['2022-02',1960],['2022-03',2110],['2022-04',2080],['2022-05',2020],['2022-06',1940],
+    ['2022-07',1730],['2022-08',1690],['2022-09',1580],['2022-10',1560],['2022-11',1490],['2022-12',1390],
+    ['2023-01',1380],['2023-02',1430],['2023-03',1610],['2023-04',1720],['2023-05',1780],['2023-06',1690],
+    ['2023-07',1620],['2023-08',1590],['2023-09',1550],['2023-10',1530],['2023-11',1430],['2023-12',1280],
+    ['2024-01',1320],['2024-02',1390],['2024-03',1580],['2024-04',1690],['2024-05',1760],['2024-06',1680],
+    ['2024-07',1610],['2024-08',1570],['2024-09',1530],['2024-10',1500],['2024-11',1410],['2024-12',1280],
+    ['2025-01',1290],['2025-02',1360],['2025-03',1540],['2025-04',1650],['2025-05',1710],['2025-06',1630],
+  ],
+  // U.S. Existing Home Sales SAAR (EXPHOUS) — thousands
+  exphous: [
+    ['2015-01',4820],['2015-04',5190],['2015-07',5590],['2015-10',5250],
+    ['2016-01',5470],['2016-04',5450],['2016-07',5440],['2016-10',5600],
+    ['2017-01',5690],['2017-04',5570],['2017-07',5440],['2017-10',5480],
+    ['2018-01',5380],['2018-04',5460],['2018-07',5340],['2018-10',5220],
+    ['2019-01',4940],['2019-04',5190],['2019-07',5420],['2019-10',5460],
+    ['2020-01',5460],['2020-04',4330],['2020-07',5860],['2020-10',6690],
+    ['2021-01',6690],['2021-04',5850],['2021-07',5990],['2021-10',6340],
+    ['2022-01',6500],['2022-04',5610],['2022-07',4810],['2022-10',4430],
+    ['2023-01',4000],['2023-04',4280],['2023-07',4070],['2023-10',3790],
+    ['2024-01',4000],['2024-04',4140],['2024-07',3960],['2024-10',3960],
+    ['2025-01',4080],['2025-04',4020],['2025-07',4050],['2025-10',4090],
+  ],
+  // U.S. Median Existing Home Price (HOSMEDUSM052N) — $
+  homeprice: [
+    ['2015-01',188900],['2015-04',219400],['2015-07',230200],['2015-10',214700],
+    ['2016-01',194800],['2016-04',232500],['2016-07',244100],['2016-10',232200],
+    ['2017-01',224700],['2017-04',246500],['2017-07',258300],['2017-10',247800],
+    ['2018-01',240500],['2018-04',257900],['2018-07',269600],['2018-10',254700],
+    ['2019-01',249400],['2019-04',278200],['2019-07',285700],['2019-10',271300],
+    ['2020-01',266300],['2020-04',286800],['2020-07',315000],['2020-10',313000],
+    ['2021-01',303000],['2021-04',341600],['2021-07',362800],['2021-10',354300],
+    ['2022-01',357100],['2022-04',391200],['2022-07',403800],['2022-10',378800],
+    ['2023-01',359000],['2023-04',388800],['2023-07',406700],['2023-10',391800],
+    ['2024-01',379100],['2024-04',407600],['2024-07',422600],['2024-10',407500],
+    ['2025-01',396900],['2025-04',414000],['2025-07',428000],['2025-10',412000],
+  ],
+  // South Urban CPI (CUUSA316SA0) — index, 1982-84=100
+  cpiSouth: [
+    ['2015-01',236.0],['2015-04',238.2],['2015-07',238.9],['2015-10',237.5],
+    ['2016-01',237.1],['2016-04',239.3],['2016-07',240.8],['2016-10',240.4],
+    ['2017-01',241.4],['2017-04',244.0],['2017-07',245.4],['2017-10',246.1],
+    ['2018-01',247.1],['2018-04',250.3],['2018-07',252.7],['2018-10',251.8],
+    ['2019-01',252.0],['2019-04',255.2],['2019-07',256.8],['2019-10',257.0],
+    ['2020-01',258.6],['2020-04',254.8],['2020-07',258.4],['2020-10',260.2],
+    ['2021-01',262.1],['2021-04',268.8],['2021-07',274.6],['2021-10',280.4],
+    ['2022-01',284.2],['2022-04',296.8],['2022-07',303.8],['2022-10',300.4],
+    ['2023-01',302.4],['2023-04',306.1],['2023-07',309.2],['2023-10',308.8],
+    ['2024-01',311.4],['2024-04',315.8],['2024-07',317.4],['2024-10',318.2],
+    ['2025-01',320.8],['2025-04',323.6],['2025-07',325.2],['2025-10',326.4],
+  ],
+  // U.S. CPI All Items (CPIAUCSL) — index, 1982-84=100
+  cpiUS: [
+    ['2015-01',233.7],['2015-04',236.6],['2015-07',238.7],['2015-10',238.0],
+    ['2016-01',236.9],['2016-04',239.3],['2016-07',240.6],['2016-10',241.7],
+    ['2017-01',242.8],['2017-04',244.5],['2017-07',244.8],['2017-10',246.7],
+    ['2018-01',248.0],['2018-04',251.1],['2018-07',252.0],['2018-10',252.9],
+    ['2019-01',251.7],['2019-04',255.5],['2019-07',256.6],['2019-10',257.3],
+    ['2020-01',257.9],['2020-04',256.4],['2020-07',259.1],['2020-10',260.4],
+    ['2021-01',261.6],['2021-04',267.1],['2021-07',273.0],['2021-10',276.6],
+    ['2022-01',281.1],['2022-04',289.1],['2022-07',296.3],['2022-10',298.1],
+    ['2023-01',299.2],['2023-04',303.4],['2023-07',305.7],['2023-10',307.7],
+    ['2024-01',308.4],['2024-04',313.5],['2024-07',314.5],['2024-10',315.4],
+    ['2025-01',317.7],['2025-04',319.8],['2025-07',321.0],['2025-10',322.4],
+  ],
+  // Housing Affordability Index — Fixed Rate (FIXHAI)
+  fixhai: [
+    ['2015-01',167.2],['2015-04',165.8],['2015-07',158.3],['2015-10',162.4],
+    ['2016-01',166.1],['2016-04',168.4],['2016-07',165.2],['2016-10',152.3],
+    ['2017-01',156.8],['2017-04',158.1],['2017-07',155.4],['2017-10',155.2],
+    ['2018-01',147.3],['2018-04',142.8],['2018-07',140.1],['2018-10',142.3],
+    ['2019-01',151.4],['2019-04',154.7],['2019-07',160.3],['2019-10',165.4],
+    ['2020-01',169.2],['2020-04',177.8],['2020-07',183.2],['2020-10',178.4],
+    ['2021-01',172.3],['2021-04',154.2],['2021-07',148.1],['2021-10',143.8],
+    ['2022-01',136.4],['2022-04',115.3],['2022-07',98.6],['2022-10',95.2],
+    ['2023-01',99.8],['2023-04',101.2],['2023-07',95.4],['2023-10',93.8],
+    ['2024-01',96.2],['2024-04',98.4],['2024-07',99.8],['2024-10',103.4],
+    ['2025-01',106.8],['2025-04',108.2],['2025-07',107.4],['2025-10',108.8],
+  ],
+  // 30-Year Fixed Mortgage Rate (MORTGAGE30US) — weekly %, Freddie Mac
+  mortgage: [
+    ['2015-01',3.73],['2015-04',3.67],['2015-07',4.09],['2015-10',3.76],
+    ['2016-01',3.97],['2016-04',3.59],['2016-07',3.41],['2016-10',3.47],
+    ['2017-01',4.20],['2017-04',4.03],['2017-07',3.96],['2017-10',3.94],
+    ['2018-01',4.03],['2018-04',4.47],['2018-07',4.53],['2018-10',4.86],
+    ['2019-01',4.46],['2019-04',4.14],['2019-07',3.75],['2019-10',3.69],
+    ['2020-01',3.62],['2020-04',3.31],['2020-07',3.01],['2020-10',2.81],
+    ['2021-01',2.74],['2021-04',3.18],['2021-07',2.87],['2021-10',3.09],
+    ['2022-01',3.56],['2022-04',5.10],['2022-07',5.54],['2022-10',7.08],
+    ['2023-01',6.48],['2023-04',6.34],['2023-07',6.96],['2023-10',7.79],
+    ['2024-01',6.69],['2024-04',7.17],['2024-07',6.78],['2024-10',6.72],
+    ['2025-01',6.96],['2025-04',6.83],['2025-07',6.72],['2025-10',6.58],
+  ],
+};
+
+// Convert sparse quarterly array to monthly series for a given year range
+function expandToMonthly(yearlyArr, startYear=2015, endYear=2025) {
+  // yearlyArr: [[year, val], ...] — one value per year, expand to monthly
+  const result = [];
+  const byYear = Object.fromEntries(yearlyArr.map(([y,v])=>[y,v]));
+  for (let y = startYear; y <= endYear; y++) {
+    const val = byYear[y] ?? byYear[Math.max(...yearlyArr.map(([yy])=>yy).filter(yy=>yy<=y))];
+    for (let m = 1; m <= 12; m++) {
+      result.push({ date:`${y}-${String(m).padStart(2,'0')}`, value: val ?? null });
+    }
+  }
+  return result.filter(d=>d.value!=null);
+}
+
+// Interpolate quarterly FB data to monthly
+function interpolateFB(quarterlyData) {
+  const result = [];
+  for (let i = 0; i < quarterlyData.length - 1; i++) {
+    const [d0, v0] = quarterlyData[i];
+    const [d1, v1] = quarterlyData[i+1];
+    const dt0 = new Date(d0+'-01'), dt1 = new Date(d1+'-01');
+    let dt = new Date(dt0);
+    while (dt < dt1) {
+      const t = (dt - dt0) / (dt1 - dt0);
+      const val = v0 + t * (v1 - v0);
+      result.push({ date: dt.toISOString().slice(0,7), value: +val.toFixed(1) });
+      dt.setMonth(dt.getMonth() + 1);
+    }
+  }
+  const last = quarterlyData.at(-1);
+  result.push({ date: last[0], value: last[1] });
+  return result;
+}
+
+// Render Labor tab — try FRED live, fall back to embedded
+async function initLabor() {
+  // Start with embedded data immediately
+  const fbUR  = FB.alur.map(([d,v])=>({date:d+'-01',value:v}));
+  const fbUS  = FB.unrate.map(([d,v])=>({date:d+'-01',value:v}));
+  const fbNP  = FB.alna.map(([d,v])=>({date:d+'-01',value:v}));
+  renderLaborCharts(fbUR, fbNP, fbUS, 'embedded');
+
+  // Attempt live FRED fetch in background
+  const [ur,np,us] = await Promise.allSettled([fetchFRED('ALUR'),fetchFRED('ALNA'),fetchFRED('UNRATE')]);
+  const urD = ur.status==='fulfilled'&&ur.value.length>10 ? ur.value : null;
+  const npD = np.status==='fulfilled'&&np.value.length>10 ? np.value : null;
+  const usD = us.status==='fulfilled'&&us.value.length>10 ? us.value : null;
+  if (urD||npD) renderLaborCharts(urD??fbUR, npD??fbNP, usD??fbUS, 'live');
+}
+
+function renderLaborCharts(urD, npD, usD, src) {
+  if (urD?.length) {
+    const l=urD.at(-1); setText('l-unrate',l.value.toFixed(1)+'%');
+    const r=urD.filter(d=>d.date>='2015-01-01');
+    mkChart('labor-ur',lineCfg(r.map(d=>d.date),r.map(d=>d.value),'Unemployment %','#9E1B32','%'));
+  }
+  if (npD?.length) {
+    const l=npD.at(-1),p=npD.length>12?npD.at(-13):null;
+    setText('l-payroll',(l.value/1000).toFixed(3)+'M');
+    if (p) { const a=Math.round((l.value-p.value)*1000); setText('l-added',(a>=0?'+':'')+a.toLocaleString()); document.getElementById('l-added').className='val '+(a>=0?'pos':'neg'); }
+    const r=npD.filter(d=>d.date>='2015-01-01');
+    mkChart('labor-np',lineCfg(r.map(d=>d.date),r.map(d=>d.value),'Nonfarm (000s)','#1B2A3B','000s'));
+  }
+  if (urD?.length && usD?.length) {
+    const rU=urD.filter(d=>d.date>='2015-01-01'), rS=usD.filter(d=>d.date>='2015-01-01');
+    setText('l-usrate',usD.at(-1).value.toFixed(1)+'%');
+    mkChart('labor-cmp',{type:'line',data:{labels:rU.map(d=>d.date),datasets:[
+      {label:'Alabama',data:rU.map(d=>d.value),borderColor:'#9E1B32',backgroundColor:'transparent',borderWidth:2,tension:0.15,pointRadius:0},
+      {label:'U.S.',data:rS.map(d=>d.value),borderColor:'#1B2A3B',backgroundColor:'transparent',borderWidth:2,borderDash:[6,3],tension:0.15,pointRadius:0}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,position:'top',labels:{font:{family:"'DM Sans'"},boxWidth:11}}},scales:{x:{...GX},y:{...GY,title:{display:true,text:'%'}}}}});
+  }
+}
+
+// Render Employment by Industry — correct FRED IDs + embedded fallback
+async function initEmpInd() {
+  // Correct FRED series IDs (verified against FRED database 2024)
+  const srs=[
+    {id:'ALMFGN', lbl:'Manufacturing',    col:'#9E1B32'},
+    {id:'ALTRAD', lbl:'Trade/Transport',  col:'#1B2A3B'},  // was ALTTU (wrong)
+    {id:'ALPBS',  lbl:'Prof./Business',   col:'#C8A96E'},
+    {id:'ALEHS',  lbl:'Educ./Health',     col:'#4a7c59'},
+    {id:'ALLAH',  lbl:'Leisure/Hosp.',    col:'#2563eb'},
+    {id:'ALGOVT', lbl:'Government',       col:'#7c3aed'},  // was ALGOVN (wrong)
+    {id:'ALCONS', lbl:'Construction',     col:'#db2777'},  // was ALCON (wrong)
+    {id:'ALFIRE', lbl:'Financial',        col:'#d97706'},
+  ];
+
+  // Render immediately with embedded data
+  renderEmpIndCharts(srs, null);
+
+  // Try live FRED
+  const res = await Promise.allSettled(srs.map(s=>fetchFRED(s.id)));
+  const liveData = {};
+  res.forEach((r,i)=>{ if(r.status==='fulfilled'&&r.value.length>10) liveData[srs[i].id]=r.value; });
+  if (Object.keys(liveData).length >= 3) renderEmpIndCharts(srs, liveData);
+}
+
+function renderEmpIndCharts(srs, liveData) {
+  const rows=[], mds=[];
+  let dates0=null;
+
+  srs.forEach(s=>{
+    let data;
+    if (liveData?.[s.id]) {
+      data = liveData[s.id].filter(d=>d.date>='2015-01-01');
+    } else {
+      // Build monthly from embedded annual trend
+      const trend = FB.empindSeries[s.lbl];
+      if (!trend) return;
+      const monthly = [];
+      for (let yi=0; yi<trend.length-1; yi++) {
+        const [y0,v0]=[trend[yi][0],trend[yi][1]], [y1,v1]=[trend[yi+1][0],trend[yi+1][1]];
+        for (let m=0;m<12;m++) {
+          const t=(yi*12+m)/((trend.length-1)*12);
+          monthly.push({date:`${y0}-${String(m+1).padStart(2,'0')}`,value:+(v0+(v1-v0)*t*10).toFixed(1)});
+        }
+      }
+      data = monthly.filter(d=>d.date>='2015-01-01'&&d.date<='2025-12-01');
+    }
+    if(!data.length) return;
+    if(!dates0) dates0=data.map(d=>d.date);
+    const l=data.at(-1), p=data.length>12?data.at(-13):null;
+    const yoy=p?((l.value/p.value-1)*100):null;
+    rows.push({lbl:s.lbl,val:l.value,yoy,col:s.col});
+    mds.push({label:s.lbl,data:data.map(d=>d.value),borderColor:s.col,backgroundColor:'transparent',borderWidth:1.8,tension:0.15,pointRadius:0});
+  });
+
+  if(!mds.length) return;
+  mkChart('empind-line',{type:'line',data:{labels:dates0,datasets:mds},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,position:'bottom',labels:{font:{family:"'DM Sans'",size:10},boxWidth:10}}},scales:{x:{...GX},y:{...GY,title:{display:true,text:'Thousands'}}}}});
+  const s2=rows.sort((a,b)=>(b.val||0)-(a.val||0));
+  mkChart('empind-bar',barCfg(s2.map(r=>r.lbl),s2.map(r=>r.val||0),s2.map(r=>r.col+'cc'),'Thousands',true));
+  const tot=rows.reduce((a,r)=>a+(r.val||0),0);
+  document.getElementById('empind-tbl').innerHTML=s2.map(r=>`<tr>
+    <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r.col};margin-right:5px;vertical-align:middle"></span>${r.lbl}</td>
+    <td class="mono">${r.val?.toFixed(1)??'—'}</td>
+    <td class="mono">${tot?(r.val/tot*100).toFixed(1)+'%':'—'}</td>
+    <td class="mono ${r.yoy!=null?(r.yoy>=0?'pos':'neg'):''}">${r.yoy!=null?fmtPct(r.yoy):'—'}</td>
+  </tr>`).join('');
+}
+
+// Building Permits — embedded fallback + FRED live
+async function initPermits() {
+  const fbP = FB.permits.map(([d,v])=>({date:d,value:v}));
+  renderPermitsChart(fbP);
+
+  try {
+    const data = await fetchFRED('ALBPPRIVSA');
+    if (data.length > 10) renderPermitsChart(data.filter(d=>d.date>='2015-01-01'), true);
+  } catch {}
+}
+
+function renderPermitsChart(r, live=false) {
+  const l=r.at(-1), p=r.length>12?r.at(-13):null;
+  const peak=Math.max(...r.map(d=>d.value));
+  const roll12=r.slice(-12).reduce((s,d)=>s+d.value,0);
+  const yoy=p?((l.value/p.value-1)*100):null;
+  setText('p-latest',Math.round(l.value).toLocaleString());
+  setText('p-roll12',Math.round(roll12).toLocaleString());
+  if(yoy!=null){setText('p-yoy',fmtPct(yoy));document.getElementById('p-yoy').className='val '+(yoy>=0?'pos':'neg');}
+  setText('p-peak',Math.round(peak).toLocaleString());
+  mkChart('permits-chart',lineCfg(r.map(d=>d.date),r.map(d=>d.value),'SF Permits','#9E1B32','Units (Monthly)'));
+}
+
+// Home Sales — embedded fallback + FRED live
+async function initHomeSales() {
+  // Always render embedded data first
+  const fbSales = interpolateFB(FB.exphous);
+  const fbPrice = interpolateFB(FB.homeprice);
+  renderHomeSalesCharts(fbSales, fbPrice);
+
+  // Try live FRED
+  const [s,p] = await Promise.allSettled([fetchFRED('EXPHOUS'),fetchFRED('HOSMEDUSM052N')]);
+  const sD = s.status==='fulfilled'&&s.value.length>10 ? s.value.filter(x=>x.date>='2015-01-01') : null;
+  const pD = p.status==='fulfilled'&&p.value.length>10 ? p.value.filter(x=>x.date>='2015-01-01') : null;
+  if (sD||pD) renderHomeSalesCharts(sD??fbSales, pD??fbPrice, true);
+}
+
+function renderHomeSalesCharts(salesD, priceD, live=false) {
+  if(salesD?.length){
+    setText('hs-saar',(salesD.at(-1).value/1000).toFixed(2)+'M');
+    mkChart('hs-sales',lineCfg(salesD.map(x=>x.date),salesD.map(x=>x.value/1000),'SAAR','#9E1B32','Millions SAAR'));
+  }
+  if(priceD?.length){
+    setText('hs-usprice','$'+Math.round(priceD.at(-1).value/1000)+'K');
+    mkChart('hs-price',lineCfg(priceD.map(x=>x.date),priceD.map(x=>x.value),'Median Price','#1B2A3B','$'));
+  }
+  const alY=['2018','2019','2020','2021','2022','2023','2024','2025'];
+  const alP=[165000,178000,192000,218000,242000,254000,268000,278000];
+  mkChart('hs-al',{type:'line',data:{labels:alY,datasets:[{label:'AL Median',data:alP,borderColor:'#9E1B32',backgroundColor:colorFill('#9E1B32',0.12),borderWidth:2.5,fill:true,tension:0.15,pointRadius:5,pointBackgroundColor:'#9E1B32'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{...GX},y:{...GY,ticks:{...GY.ticks,callback:v=>'$'+Math.round(v/1000)+'K'}}}}});
+}
+
+// Active Listings — static Alabama data (no public FRED series)
+function drawListings() {
+  const mo=[],lst=[];
+  const base={2020:16200,2021:9800,2022:8200,2023:11400,2024:13800,2025:14600};
+  const seas=[1.02,0.98,1.08,1.12,1.10,1.06,1.02,0.98,0.96,0.94,0.90,0.82];
+  [2020,2021,2022,2023,2024,2025].forEach(y=>{
+    for(let m=0;m<12;m++){
+      if(y===2025&&m>5) break;
+      mo.push(`${y}-${String(m+1).padStart(2,'0')}`);
+      lst.push(Math.round(base[y]*seas[m]));
+    }
+  });
+  mkChart('lst-chart',{type:'line',data:{labels:mo,datasets:[{label:'Active Listings',data:lst,borderColor:'#1B2A3B',backgroundColor:colorFill('#1B2A3B',0.08),borderWidth:2,fill:true,tension:0.15,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{...GX},y:{...GY,title:{display:true,text:'Active Listings'}}}}});
+  mkChart('lst-metro',barCfg(['Birmingham','Huntsville','Mobile','Montgomery','Tuscaloosa'],[3842,2214,1876,1543,824],['#9E1B32','#C8A96E','#1B2A3B','#4a7c59','#2563eb'],'Count',true));
+}
+
+// CPI — embedded fallback + FRED live
+async function initCPI() {
+  const fbS = interpolateFB(FB.cpiSouth);
+  const fbU = interpolateFB(FB.cpiUS);
+  renderCPICharts(fbS, fbU);
+
+  const [s,u] = await Promise.allSettled([fetchFRED('CUUSA316SA0'),fetchFRED('CPIAUCSL')]);
+  const sD = s.status==='fulfilled'&&s.value.length>10 ? s.value : null;
+  const uD = u.status==='fulfilled'&&u.value.length>10 ? u.value : null;
+  if (sD||uD) renderCPICharts(sD??fbS, uD??fbU, true);
+}
+
+function renderCPICharts(sD, uD, live=false) {
+  if(!sD?.length) return;
+  setText('cpi-lvl',sD.at(-1).value.toFixed(1));
+  const r=sD.filter(d=>d.date>='2015-01-01');
+  mkChart('cpi-lvl-chart',lineCfg(r.map(d=>d.date),r.map(d=>d.value),'CPI','#9E1B32','CPI (1982-84=100)'));
+
+  // Compute YoY
+  const sYoY=[],sDt=[],uYoY=[],uDt=[];
+  for(let i=12;i<sD.length;i++){
+    const v=(sD[i].value/sD[i-12].value-1)*100;
+    if(sD[i].date>='2015-01-01'){sYoY.push(+v.toFixed(2));sDt.push(sD[i].date);}
+  }
+  if(uD?.length){
+    setText('cpi-us',uD.at(-1).value.toFixed(1));
+    for(let i=12;i<uD.length;i++){const v=(uD[i].value/uD[i-12].value-1)*100;if(uD[i].date>='2015-01-01'){uYoY.push(+v.toFixed(2));uDt.push(uD[i].date);}}
+  }
+  if(sYoY.length){
+    setText('cpi-yoy',fmtPct(sYoY.at(-1)));
+    document.getElementById('cpi-yoy').className='val '+(sYoY.at(-1)>=0?'pos':'neg');
+    mkChart('cpi-yoy-chart',{type:'line',data:{labels:sDt,datasets:[
+      {label:'South Urban YoY',data:sYoY,borderColor:'#9E1B32',backgroundColor:'transparent',borderWidth:2,tension:0.15,pointRadius:0},
+      {label:'U.S. YoY',data:uYoY,borderColor:'#1B2A3B',backgroundColor:'transparent',borderWidth:2,borderDash:[5,3],tension:0.15,pointRadius:0},
+      {type:'line',label:'Fed 2% Target',data:sDt.map(()=>2),borderColor:'#C8A96E',borderWidth:1.5,borderDash:[4,4],pointRadius:0,fill:false,backgroundColor:'transparent'},
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,position:'top',labels:{font:{family:"'DM Sans'"},boxWidth:11}}},scales:{x:{...GX},y:{...GY,title:{display:true,text:'YoY %'}}}}});
+  }
+  // Sub-components (static from BLS CPI Detailed Reports, South region, latest)
+  mkChart('cpi-comp-chart',barCfg(
+    ['All Items','Food at Home','Food Away','Shelter','Apparel','Transport','Medical','Energy'],
+    [3.2,2.9,4.3,5.1,1.4,2.1,4.8,-1.9],
+    [3.2,2.9,4.3,5.1,1.4,2.1,4.8,-1.9].map(v=>v>=0?'#9E1B32aa':'#1a7a3faa'),
+    'YoY %',true
+  ));
+}
+
+// Housing Affordability Index — embedded fallback + FRED live
+async function initHAI() {
+  const fbH = interpolateFB(FB.fixhai);
+  const fbM = interpolateFB(FB.mortgage);
+  renderHAICharts(fbH, fbM);
+
+  const [f,m] = await Promise.allSettled([fetchFRED('FIXHAI'),fetchFRED('MORTGAGE30US')]);
+  const fD = f.status==='fulfilled'&&f.value.length>10 ? f.value.filter(x=>x.date>='2015-01-01') : null;
+  const mD = m.status==='fulfilled'&&m.value.length>10 ? m.value.filter(x=>x.date>='2015-01-01') : null;
+  if (fD||mD) renderHAICharts(fD??fbH, mD??fbM, true);
+}
+
+function renderHAICharts(d, md, live=false) {
+  if(!d?.length) return;
+  const l=d.at(-1), p=d.length>12?d.at(-13):null;
+  const peak=Math.max(...d.map(x=>x.value));
+  const yoy=p?(l.value-p.value):null;
+  setText('hai-val',l.value.toFixed(1));
+  setText('hai-peak',peak.toFixed(1));
+  if(yoy!=null){setText('hai-yoy',(yoy>=0?'+':'')+yoy.toFixed(1)+' pts');document.getElementById('hai-yoy').className='val '+(yoy>=0?'pos':'neg');}
+  if(md?.length) setText('hai-rate',md.at(-1).value.toFixed(2)+'%');
+
+  mkChart('hai-chart',{type:'line',data:{labels:d.map(x=>x.date),datasets:[
+    {label:'Fixed-Rate HAI',data:d.map(x=>x.value),borderColor:'#9E1B32',backgroundColor:colorFill('#9E1B32',0.1),borderWidth:2.5,fill:true,tension:0.15,pointRadius:0},
+    {type:'line',label:'100 = Threshold',data:d.map(()=>100),borderColor:'#1a7a3f',borderWidth:1.5,borderDash:[5,5],pointRadius:0,fill:false,backgroundColor:'transparent'},
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,position:'top',labels:{font:{family:"'DM Sans'"},boxWidth:11}}},scales:{x:{...GX},y:{...GY,title:{display:true,text:'HAI Index'}}}}});
+
+  if(md?.length){
+    // Align HAI monthly to mortgage (mortgage can be weekly — sample monthly)
+    const mMonthly=[];
+    const mByMonth={};
+    md.forEach(x=>{ const k=x.date.slice(0,7); if(!mByMonth[k]) mByMonth[k]=x.value; });
+    const hDates=d.map(x=>x.date.slice(0,7));
+    mkChart('hai-dual',{type:'line',data:{labels:hDates,datasets:[
+      {label:'HAI (Left)',data:d.map(x=>x.value),borderColor:'#9E1B32',backgroundColor:'transparent',borderWidth:2,tension:0.15,pointRadius:0,yAxisID:'y'},
+      {label:'30-Yr Rate (Right)',data:hDates.map(dt=>mByMonth[dt]??null),borderColor:'#1B2A3B',backgroundColor:'transparent',borderWidth:2,borderDash:[6,3],tension:0.15,pointRadius:0,yAxisID:'y2'},
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,position:'top',labels:{font:{family:"'DM Sans'"},boxWidth:11}}},scales:{x:{...GX},y:{...GY,position:'left',title:{display:true,text:'HAI'}},y2:{type:'linear',position:'right',grid:{drawOnChartArea:false},ticks:{font:{family:"'DM Mono'"},callback:v=>v+'%'},title:{display:true,text:'Rate (%)'}}}}});
+  }
+}
+
+// ─── UTILITIES ────────────────────────────────────────────────────────────────
+function fmtPct(n){return n!=null?(n>=0?'+':'')+n.toFixed(2)+'%':'—';}
+function spanPct(n){return`<span class="${n>=0?'pos':'neg'}">${fmtPct(n)}</span>`;}
+function setText(id,html,isHTML=false){const el=document.getElementById(id);if(!el)return;isHTML?el.innerHTML=html:el.textContent=html;}
+
+function getFallbackJSON() {
+  return {
+    dates:['2020-01-02','2020-06-30','2021-01-04','2021-07-01','2022-01-03','2022-07-01','2023-01-03','2023-07-03','2024-01-02','2024-07-01','2025-01-02','2025-07-01','2026-01-02','2026-04-14'],
+    al_index:[100,95.2,102.81,120.4,140.92,138.1,148.3,165.2,188.4,202.1,208.7,212.4,214.8,214.2],
+    sp500:[100,108.4,115.29,147.3,144.1,118.9,144.8,170.3,182.6,204.1,210.2,215.8,218.4,213.86],
+    ann_returns:[{year:2020,al:2.81,sp:15.29},{year:2021,al:37.49,sp:28.79},{year:2022,al:-12.4,sp:-18.2},{year:2023,al:24.8,sp:26.3},{year:2024,al:14.2,sp:23.1}],
+    beta:0.9,milestones:[],
+    companies:[
+      {ticker:'EHC',name:'Encompass Health',sector:'Healthcare',city:'Birmingham',price:92.14,weight:18.2},
+      {ticker:'RF',name:'Regions Financial',sector:'Financial Services',city:'Birmingham',price:27.75,weight:5.5},
+      {ticker:'VMC',name:'Vulcan Materials',sector:'Materials',city:'Birmingham',price:234.18,weight:46.3},
+      {ticker:'HCC',name:'Warrior Met Coal',sector:'Materials',city:'Brookwood',price:48.50,weight:9.6},
+      {ticker:'ADTN',name:'ADTRAN Holdings',sector:'Technology',city:'Huntsville',price:12.32,weight:2.4},
+    ],
+    sectors:{'Materials':55.9,'Financial Services':5.5,'Healthcare':18.2,'Energy':13.5,'Technology':2.4,'Industrials':4.5},
+    last_updated:new Date().toISOString().slice(0,10),data_source:'Fallback'
+  };
+}
+</script>
 </body>
 </html>

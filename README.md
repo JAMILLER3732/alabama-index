@@ -1,63 +1,164 @@
-# Alabama Stock Market Index
+# Alabama Stock Index (ALSI) Dashboard
 
-Static website for tracking a price-weighted Alabama stock index against the S&P 500.
+A comprehensive interactive regional economic dashboard tracking the **Alabama Stock Market Index (ALSI)** against national benchmarks (DJIA, S&P 500 Equally Weighted). Built as a leading economic indicator for the State of Alabama, consistent with the [FGCU/RERI Southwest Florida Stock Index](https://www.fgcu.edu/cob/reri/dashboard/swfl-stock-index) methodology.
 
-## What this project is now
+**Live Demo:** `https://<your-username>.github.io/<repo-name>/`
 
-- A static website you can host on GitHub Pages
-- A JavaScript data updater that creates `data/al_index_data.json`
-- No server-side runtime required for hosting
+---
 
-## Files that matter
+## 📊 What's Included
 
-- `index.html` opens the site
-- `templates/index.html` contains the dashboard layout and browser code
-- `data/al_index_data.json` contains the stock data used by the site
-- `scripts/update_data.mjs` refreshes the data snapshot
+### ALSI Stock Index Tab
+- **Price-Weighted Index (PWI)** of 9 Alabama-headquartered public companies
+- Benchmarked vs **DJIA** and **S&P 500 Equally Weighted (RSP)**
+- FGCU-style sidebar: dual-range date slider + click-to-change line colors + visibility toggles
+- Daily granularity area chart (base = 100, Jan 2 2020)
+- Component breakdown table, sector allocation, beta analysis, annual returns
 
-## Local use
+### Economic Indicator Tabs (Live FRED + BLS Data)
+| Tab | Source |
+|-----|--------|
+| Airport Passenger Activity | BTS T-100 Data |
+| Tourist Tax Revenues | Alabama Dept. of Revenue |
+| Taxable Sales | Alabama Dept. of Revenue |
+| Labor Force & Employment | FRED — ALUR, ALNA, UNRATE |
+| Employment by Industry | FRED — Alabama SAE series |
+| Single-Family Building Permits | FRED — ALBPPRIVSA |
+| Existing Home Sales | FRED — EXPHOUS, HOSMEDUSM052N |
+| Residential Active Listings | Realtor.com / Alabama REALTORS® |
+| Consumer Price Index | FRED — CUUSA316SA0, CPIAUCSL |
+| Housing Affordability Index | FRED — FIXHAI, MORTGAGE30US |
 
-Install dependencies:
+---
+
+## 🏗️ ALSI Constituents
+
+| Ticker | Company | Sector | HQ |
+|--------|---------|--------|-----|
+| EHC | Encompass Health Corp | Healthcare | Birmingham |
+| RF | Regions Financial Corp | Financial Services | Birmingham |
+| VMC | Vulcan Materials Company | Materials | Birmingham |
+| MPW | Medical Properties Trust | Real Estate | Birmingham |
+| ADTN | ADTRAN Holdings | Technology | Huntsville |
+| ROAD | Construction Partners Inc | Industrials | Dothan |
+| HCC | Warrior Met Coal Inc | Materials | Brookwood |
+| TBRG | TruBridge Inc | Health Technology | Mobile |
+| LAKE | Lakeland Industries Inc | Consumer Goods | Huntsville |
+
+---
+
+## 🚀 GitHub Pages Deployment (Step-by-Step)
+
+### 1. Create & Push the Repository
 
 ```bash
+# Create a new GitHub repository at github.com, then:
+git clone https://github.com/<your-username>/<repo-name>.git
+cd <repo-name>
+
+# Copy all files from this zip into the repo directory
+# Then:
+git add .
+git commit -m "Initial commit: Alabama Stock Index Dashboard"
+git push origin main
+```
+
+### 2. Enable GitHub Pages
+
+1. Go to your repository on GitHub
+2. Click **Settings** → **Pages** (left sidebar)
+3. Under **Source**, select **Deploy from a branch**
+4. Choose **Branch: main** and **Folder: / (root)**
+5. Click **Save**
+6. Your site will be live at `https://<username>.github.io/<repo-name>/` within ~2 minutes
+
+### 3. Generate the Lock File (One-Time Setup)
+
+```bash
+npm install          # Installs yahoo-finance2 and generates package-lock.json
+git add package-lock.json
+git commit -m "chore: add package-lock.json"
+git push
+```
+
+### 4. Enable Automatic Data Updates
+
+The included GitHub Actions workflow (`.github/workflows/update-market-data.yml`) automatically:
+- Runs **Monday–Friday at 5:30 PM ET** (after market close)
+- Fetches latest prices for all 9 ALSI constituents + S&P 500 via Yahoo Finance
+- Recomputes the PWI index
+- Commits `data/al_index_data.json` back to the repo
+- GitHub Pages auto-deploys the updated data
+
+**The workflow requires no configuration** — it uses the built-in `GITHUB_TOKEN`.
+
+You can also trigger it manually:  
+**GitHub → Actions → Update Market Data → Run workflow**
+
+---
+
+## 💻 Local Development
+
+```bash
+# Install dependencies
 npm install
-```
 
-Refresh the stock data:
+# Start local server (http://localhost:8080)
+npm run dev
 
-```bash
+# Or manually update data
 npm run update-data
 ```
 
-Preview the website locally:
+> ⚠️ Open via `http://localhost:8080` — not `file://`. The dashboard fetches `data/al_index_data.json` via HTTP; opening as a local file will trigger the embedded fallback data.
 
-```bash
-npm run preview
+---
+
+## 📐 Index Methodology
+
+**Price-Weighted Index (PWI):**
+```
+ALSI(t) = [ Σ Stock Prices(t) × (N_base / N_valid(t)) ] ÷ Divisor
 ```
 
-## GitHub Pages
+Where:
+- `Divisor = Σ(Constituent Prices on Jan 2, 2020) / 100`
+- `N_base` = number of tickers with valid prices on base date
+- `N_valid(t)` = number of tickers with valid prices on date t
+- Scaling by `N_base/N_valid` prevents deflation when a ticker has no data
 
-Follow the step-by-step instructions in `GITHUB-PAGES-GUIDE.md`.
+This methodology is consistent with:
+- The Dow Jones Industrial Average (DJIA)
+- The FGCU/RERI Southwest Florida Stock Index (IBS: 2023-08)
 
-## Updating the company list
+**Base Value:** 100 on January 2, 2020  
+**Benchmarks:** DJIA · S&P 500 Equally Weighted (RSP ETF)  
+**Data Source:** Yahoo Finance via `yahoo-finance2` Node.js package
 
-Open `scripts/update_data.mjs` and edit the `AL_INDEX` object.
+---
 
-After making changes, run:
+## 📁 Repository Structure
 
-```bash
-npm run update-data
+```
+alabama-index/
+├── .github/
+│   └── workflows/
+│       └── update-market-data.yml   # Auto-update GitHub Action
+├── data/
+│   └── al_index_data.json           # Pre-populated index data (auto-updated)
+├── scripts/
+│   └── update_data.mjs              # Node.js data fetching script
+├── .gitignore
+├── .nojekyll                        # Prevents GitHub Pages Jekyll processing
+├── index.html                       # Complete dashboard (single-file)
+├── package.json
+└── README.md
 ```
 
-## Deploying elsewhere
+---
 
-This folder can also be uploaded to Netlify, Cloudflare Pages, Vercel static hosting, Amazon S3, or any plain static file host.
+## ⚖️ Disclaimer
 
-## Data source
+This dashboard is for informational and research purposes only. It does not constitute investment advice. Past performance is not indicative of future results. Stock data may be delayed.
 
-- Yahoo Finance via `yahoo-finance2`
-- SEC EDGAR and public company investor relations pages for company verification
-
-## Disclaimer
-
-This project is for research and informational use only and is not investment advice.
+Data sources: Yahoo Finance · Federal Reserve (FRED) · Bureau of Labor Statistics · Census Bureau · Bureau of Transportation Statistics · Alabama Department of Revenue.

@@ -1,15 +1,18 @@
 {
-  "name": "alabama-index",
-  "private": true,
+  "name": "alabama-stock-index",
+  "version": "2.0.0",
+  "description": "Alabama Stock Index (ALSI) — RERI Regional Economic Dashboard",
   "type": "module",
   "scripts": {
-    "update-data": "node ./scripts/update_data.mjs",
-    "preview": "serve ."
+    "update-data": "node scripts/update_data.mjs",
+    "dev": "npx serve . -l 8080 --no-clipboard"
   },
   "dependencies": {
-    "yahoo-finance2": "^3.14.0"
+    "yahoo-finance2": "^2.11.3"
   },
-  "devDependencies": {
-    "serve": "^14.2.6"
-  }
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["alabama", "stock-index", "economic-dashboard", "reri"],
+  "license": "MIT"
 }

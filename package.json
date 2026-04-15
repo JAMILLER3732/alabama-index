@@ -1,0 +1,15 @@
+{
+  "name": "alabama-index",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "update-data": "node ./scripts/update_data.mjs",
+    "preview": "serve ."
+  },
+  "dependencies": {
+    "yahoo-finance2": "^3.14.0"
+  },
+  "devDependencies": {
+    "serve": "^14.2.6"
+  }
+}

@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alabama Stock Market Index – RERI Dashboard</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ─── TOKENS ─────────────────────────────────────────────────── */
+    :root {
+      --crimson:    #9E1B32;
+      --crimson-d:  #7a1425;
+      --crimson-l:  #c4243e;
+      --navy:       #1B2A3B;
+      --navy-l:     #253547;
+      --gold:       #C8A96E;
+      --gold-l:     #e0c48c;
+      --bg:         #F4F4F2;
+      --surface:    #FFFFFF;
+      --border:     #D9D5CF;
+      --text:       #1B1B1B;
+      --muted:      #6B6B6B;
+      --positive:   #1a7a3f;
+      --negative:   #b91c1c;
+      --font-sans:  'IBM Plex Sans', sans-serif;
+      --font-serif: 'Playfair Display', serif;
+      --font-mono:  'IBM Plex Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    /* ─── HEADER ─────────────────────────────────────────────────── */
+    header {
+      background: var(--navy);
+      color: #fff;
+      border-bottom: 4px solid var(--crimson);
+    }
+    .header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      height: 72px;
+    }
+    .logo-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .logo-icon {
+      width: 46px; height: 46px;
+      background: var(--crimson);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-serif);
+      font-size: 20px;
+      color: #fff;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .logo-text { line-height: 1.2; }
+    .logo-text .abbr { font-size: 11px; letter-spacing: .12em; color: var(--gold); text-transform: uppercase; }
+    .logo-text .full { font-size: 13px; font-weight: 500; color: rgba(255,255,255,.85); }
+
+    .header-nav { margin-left: auto; display: flex; align-items: center; gap: 24px; }
+    .header-nav a {
+      color: rgba(255,255,255,.7);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: .04em;
+      transition: color .2s;
+    }
+    .header-nav a:hover { color: var(--gold); }
+
+    /* ─── HERO BAND ─────────────────────────────────────────────── */
+    .hero {
+      background: var(--crimson);
+      background-image: linear-gradient(135deg, var(--crimson-d) 0%, var(--crimson) 60%, var(--crimson-l) 100%);
+      color: #fff;
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+    .hero .eyebrow {
+      font-size: 11px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.65);
+      margin-bottom: 10px;
+    }
+    .hero h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 700;
+      letter-spacing: -.01em;
+      line-height: 1.15;
+    }
+    .hero p {
+      margin-top: 12px;
+      font-size: 15px;
+      color: rgba(255,255,255,.78);
+      max-width: 540px;
+      margin-left: auto; margin-right: auto;
+    }
+
+    /* ─── BREADCRUMB ─────────────────────────────────────────────── */
+    .breadcrumb {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 24px;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .breadcrumb a { color: var(--crimson); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .breadcrumb .sep { margin: 0 6px; }
+
+    /* ─── LIVE BADGE ─────────────────────────────────────────────── */
+    .live-bar {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+    }
+    .live-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #16a34a;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50%      { opacity: .4; }
+    }
+    #last-updated { color: var(--muted); }
+    .data-source-badge {
+      margin-left: auto;
+      background: var(--navy);
+      color: #fff;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      letter-spacing: .05em;
+    }
+
+    /* ─── LAYOUT ─────────────────────────────────────────────────── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    .section { padding: 48px 0 36px; }
+    .section + .section { border-top: 1px solid var(--border); }
+
+    h2 {
+      font-family: var(--font-serif);
+      font-size: 26px;
+      color: var(--crimson);
+      margin-bottom: 16px;
+    }
+    h3 { font-size: 16px; font-weight: 600; color: var(--navy); margin-bottom: 10px; }
+
+    p + p { margin-top: 12px; }
+    p { color: #333; }
+
+    /* ─── STAT CARDS ─────────────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 28px 0;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 4px; height: 100%;
+      background: var(--crimson);
+    }
+    .stat-card .label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .stat-card .value { font-family: var(--font-mono); font-size: 26px; font-weight: 500; color: var(--navy); }
+    .stat-card .sub   { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .stat-card .delta { font-size: 12px; font-weight: 600; }
+    .delta.pos { color: var(--positive); }
+    .delta.neg { color: var(--negative); }
+
+    /* ─── CHART ──────────────────────────────────────────────────── */
+    .chart-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .chart-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+    .chart-source {
+      font-size: 11px;
+      color: var(--muted);
+      font-style: italic;
+      margin-top: 10px;
+    }
+    .chart-legend {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+      font-size: 12px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot  { width: 12px; height: 12px; border-radius: 50%; }
+
+    /* ─── TABLES ─────────────────────────────────────────────────── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin: 20px 0;
+    }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); }
+    thead { background: var(--navy); color: #fff; }
+    thead th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 12px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafaf8; }
+    tbody td { padding: 11px 16px; font-size: 14px; }
+    td.mono { font-family: var(--font-mono); font-size: 13px; }
+    td.pos  { color: var(--positive); font-weight: 600; }
+    td.neg  { color: var(--negative); font-weight: 600; }
+    td.ticker-col { font-family: var(--font-mono); font-weight: 600; color: var(--crimson); }
+
+    .table-caption {
+      font-size: 12.5px;
+      font-style: italic;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .table-label {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--navy);
+      margin-bottom: 4px;
+    }
+
+    /* ─── SECTOR BARS ────────────────────────────────────────────── */
+    .sector-grid { display: grid; gap: 10px; margin: 20px 0; }
+    .sector-row { display: flex; align-items: center; gap: 12px; }
+    .sector-name { width: 160px; font-size: 13px; flex-shrink: 0; }
+    .sector-bar-wrap { flex: 1; background: #eee; border-radius: 4px; height: 10px; }
+    .sector-bar { height: 10px; border-radius: 4px; background: var(--crimson); transition: width .6s ease; }
+    .sector-pct { width: 50px; text-align: right; font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+
+    /* ─── BETA SCATTER ───────────────────────────────────────────── */
+    .beta-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin: 20px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+    .beta-num {
+      flex-shrink: 0;
+    }
+    .beta-num .big {
+      font-family: var(--font-serif);
+      font-size: 64px;
+      color: var(--crimson);
+      line-height: 1;
+    }
+    .beta-num .label {
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .beta-desc { font-size: 14px; color: #444; flex: 1; min-width: 240px; }
+    .beta-desc p + p { margin-top: 10px; }
+
+    /* ─── METHODOLOGY BOX ────────────────────────────────────────── */
+    .method-box {
+      background: #f8f6f3;
+      border-left: 4px solid var(--gold);
+      padding: 20px 24px;
+      border-radius: 0 8px 8px 0;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    .method-box .formula {
+      font-family: var(--font-mono);
+      background: var(--navy);
+      color: var(--gold);
+      padding: 12px 18px;
+      border-radius: 6px;
+      margin: 14px 0;
+      font-size: 14px;
+      display: inline-block;
+    }
+
+    /* ─── LOADING OVERLAY ────────────────────────────────────────── */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: rgba(27,42,59,.82);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      color: #fff;
+      gap: 16px;
+    }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 4px solid rgba(255,255,255,.3);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p { font-size: 14px; opacity: .8; }
+    #loading.hidden { display: none; }
+
+    /* ─── ERROR BANNER ────────────────────────────────────────────── */
+    #error-banner {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #7f1d1d;
+      padding: 14px 24px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 14px;
+      display: none;
+    }
+
+    /* ─── FOOTER ─────────────────────────────────────────────────── */
+    footer {
+      background: var(--navy);
+      color: rgba(255,255,255,.6);
+      padding: 32px 24px;
+      font-size: 12.5px;
+      margin-top: 60px;
+    }
+    footer .footer-inner { max-width: 1100px; margin: 0 auto; display: flex; gap: 40px; flex-wrap: wrap; }
+    footer strong { color: rgba(255,255,255,.9); }
+    footer a { color: var(--gold); text-decoration: none; }
+
+    /* ─── RESPONSIVE ─────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .header-nav { display: none; }
+      .beta-num .big { font-size: 44px; }
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Fetching market data…</p>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <a class="logo-badge" href="#">
+      <div class="logo-icon">AL</div>
+      <div class="logo-text">
+        <div class="abbr">RERI Dashboard</div>
+        <div class="full">Alabama Regional Economic Research</div>
+      </div>
+    </a>
+    <nav class="header-nav">
+      <a href="#intro">Introduction</a>
+      <a href="#index-chart">Index Chart</a>
+      <a href="#composition">Composition</a>
+      <a href="#methodology">Methodology</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="eyebrow">Regional Economic Indicator</div>
+  <h1>Alabama Stock Market Index</h1>
+  <p>Tracking publicly traded companies headquartered in the State of Alabama against national benchmarks.</p>
+</div>
+
+<!-- BREADCRUMB -->
+<div class="breadcrumb container">
+  <a href="#">RERI Dashboard</a>
+  <span class="sep">›</span>
+  Alabama Stock Market Index
+</div>
+
+<!-- LIVE STATUS BAR -->
+<div class="live-bar container">
+  <div class="live-dot"></div>
+  <span>Market Data</span>
+  <span id="last-updated" style="margin-left:4px">—</span>
+  <span class="data-source-badge" id="data-source">Static Snapshot</span>
+</div>
+
+<div id="error-banner" class="container"></div>
+
+<!-- ─── INTRODUCTION ─────────────────────────────────────────────── -->
+<div class="section" id="intro">
+  <div class="container">
+    <h2>Introduction</h2>
+    <p>
+      Movements in the stock market are considered to be a leading indicator of the economy.
+      This is because stock prices reflect expectations on future earnings, which are directly
+      linked to future economic activity. The Alabama Stock Market Index tracks publicly traded
+      companies headquartered within the State of Alabama and is designed to be used in
+      conjunction with broader regional economic data to form a clearer picture of Alabama's
+      overall economic trajectory.
+    </p>
+    <p>
+      In 2021, Alabama's GDP was approximately <strong>$248 billion</strong>, ranking it among the mid-tier
+      states nationally. The state's economy is anchored by automotive manufacturing, aerospace
+      and defense, financial services, materials, and healthcare — sectors well-represented in
+      this index. The Alabama Stock Market Index was built using the same price-weighted
+      methodology applied in the FGCU/RERI Southwest Florida Stock Index, allowing for
+      methodological consistency and cross-regional comparisons.
+    </p>
+    <p>
+      The index includes <strong>7 companies</strong> actively traded on U.S. exchanges, each domiciled
+      in Alabama, with a minimum market capitalization exceeding $10 million. Index prices are
+      sourced from Yahoo Finance historical data and the base date is set to January 2, 2020 = 100.
+    </p>
+
+    <!-- STAT CARDS -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="label">AL Index (Current)</div>
+        <div class="value" id="stat-al-current">—</div>
+        <div class="sub">Base: Jan 2, 2020 = 100</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">S&amp;P 500 (Indexed)</div>
+        <div class="value" id="stat-sp-current">—</div>
+        <div class="sub">Normalized to same base</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">AL Index Beta</div>
+        <div class="value" id="stat-beta">—</div>
+        <div class="sub">vs. S&amp;P 500 (2020–present)</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Avg. Annual Return (2020–2022)</div>
+        <div class="value" id="stat-geo">—</div>
+        <div class="sub" id="stat-geo-sub">Geometric mean</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── INDEX CHART ───────────────────────────────────────────────── -->
+<div class="section" id="index-chart">
+  <div class="container">
+    <h2>Index Comparison</h2>
+    <p>
+      Figure 1 shows the performance of the Alabama Stock Market Index (crimson line) compared
+      to the S&amp;P 500 (navy line), both normalized to 100 on January 2, 2020.
+      The S&amp;P 500 serves as the national benchmark. Historical price data sourced from Yahoo Finance.
+    </p>
+
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#9E1B32"></div> Alabama Index</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1B2A3B"></div> S&amp;P 500</div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Figure 1. Alabama Stock Index vs. S&amp;P 500, 2020–Present</div>
+      <canvas id="indexChart" height="90"></canvas>
+      <div class="chart-source">Source: RERI Analysis of data obtained from Yahoo Finance</div>
+    </div>
+
+    <!-- MILESTONE TABLE -->
+    <div class="table-label">Table 2. Index Prices at Beginning and End of Each Year</div>
+    <div class="table-caption">All values indexed to 100 on January 2, 2020</div>
+    <div class="table-wrap">
+      <table id="milestone-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Alabama Index</th>
+            <th>S&amp;P 500</th>
+            <th>Spread (AL – SP)</th>
+          </tr>
+        </thead>
+        <tbody id="milestone-body">
+          <tr><td colspan="4" style="text-align:center;padding:20px;color:#999">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ANNUAL RETURNS TABLE -->
+    <div class="table-label" style="margin-top:32px">Table 3. Annual Rates of Return, 2020–Present</div>
+    <div class="table-caption">Source: RERI Analysis of data obtained from Yahoo Finance</div>
+    <div class="table-wrap">
+      <table id="returns-table">
+        <thead>
+          <tr>
+            <th>Year</th>
+            <th>Alabama Index</th>
+            <th>S&amp;P 500</th>
+            <th>AL Outperformance</th>
+          </tr>
+        </thead>
+        <tbody id="returns-body">
+          <tr><td colspan="4" style="text-align:center;padding:20px;color:#999">Loading…</td></tr>
+        </tbody>
+        <tfoot id="returns-foot"></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─── BETA SECTION ──────────────────────────────────────────────── -->
+<div class="section" id="beta-section">
+  <div class="container">
+    <h2>Index Beta</h2>
+    <p>
+      The Beta coefficient measures the relationship between the returns of the Alabama
+      Index and the returns of the broader market (S&amp;P 500). It is used to assess the
+      volatility of the index and its correlation to overall market performance.
+      Beta is calculated as: <em>β = Cov(AL Index, Market) / Var(Market)</em>.
+    </p>
+    <div class="beta-box">
+      <div class="beta-num">
+        <div class="big" id="beta-display">—</div>
+        <div class="label">Alabama Index β</div>
+      </div>
+      <div class="beta-desc" id="beta-interpretation">
+        <p>Loading beta interpretation…</p>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Figure 2. Alabama Index Beta — Daily Returns Scatter (AL Index vs. S&amp;P 500)</div>
+      <canvas id="betaChart" height="120"></canvas>
+      <div class="chart-source">Source: RERI Analysis of data obtained from Yahoo Finance</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── COMPOSITION TABLE ─────────────────────────────────────────── -->
+<div class="section" id="composition">
+  <div class="container">
+    <h2>Index Composition</h2>
+    <p>
+      The Alabama Stock Market Index is a <strong>price-weighted index</strong> comprising
+      7 publicly traded companies headquartered in Alabama with market capitalizations
+      exceeding $10 million and actively traded shares on a major U.S. exchange.
+      The index composition is dominated by Financial Services, followed by Materials and Healthcare.
+    </p>
+
+    <!-- Sector Breakdown -->
+    <h3 style="margin-top:24px">Sector Allocation (by Price Weight)</h3>
+    <div class="sector-grid" id="sector-bars">
+      <div style="color:#999;font-size:13px">Loading…</div>
+    </div>
+
+    <!-- Company Table -->
+    <div class="table-label" style="margin-top:28px">Table 1. Alabama Index Composition</div>
+    <div class="table-caption">Source: RERI Analysis of data obtained from Yahoo Finance and SEC EDGAR</div>
+    <div class="table-wrap">
+      <table id="composition-table">
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Company Name</th>
+            <th>Sector</th>
+            <th>City</th>
+            <th>Last Price</th>
+            <th>Index Weight</th>
+            <th>2020 Return</th>
+            <th>2021 Return</th>
+            <th>2022 Return</th>
+          </tr>
+        </thead>
+        <tbody id="composition-body">
+          <tr><td colspan="9" style="text-align:center;padding:20px;color:#999">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─── METHODOLOGY ───────────────────────────────────────────────── -->
+<div class="section" id="methodology">
+  <div class="container">
+    <h2>Methodology</h2>
+    <p>
+      The Alabama Stock Market Index is a <strong>price-weighted index (PWI)</strong>, consistent
+      with the Bloomberg Florida Index and the FGCU/RERI Southwest Florida Stock Market Index methodology.
+      Price-weighting is used to minimize the disproportionate influence of penny stocks and
+      to maintain methodological compatibility with established regional equity indices.
+    </p>
+
+    <div class="method-box">
+      <strong>Price-Weighted Index Formula:</strong>
+      <div class="formula">PWI = Σ(Stock Prices in Index) ÷ Number of Stocks</div>
+      <p style="font-size:13.5px;color:#555">
+        The index is normalized so that its value on the base date (January 2, 2020) equals
+        <strong>100</strong>. All subsequent values are expressed relative to that baseline,
+        enabling direct percentage comparisons with the S&amp;P 500.
+      </p>
+    </div>
+
+    <h3>Stock Screening Criteria</h3>
+    <p>
+      Companies were screened using SEC EDGAR corporate filings and Bloomberg equity screener tools,
+      applying the following filters: (1) state of incorporation or principal executive offices
+      located in Alabama; (2) actively traded on NYSE, NASDAQ, or NYSE American; (3) minimum
+      market capitalization of $10 million; (4) continuous public trading history from January 2020.
+    </p>
+
+    <h3 style="margin-top:20px">Data Sources</h3>
+    <p>
+      Historical adjusted close prices are sourced from Yahoo Finance via the
+      <code style="background:#eee;padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:12px">yahoo-finance2</code>
+      Node.js package. S&amp;P 500 data (ticker: ^GSPC) serves as the national benchmark.
+      The browser reads a prebuilt JSON snapshot from <code style="background:#eee;padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:12px">data/al_index_data.json</code>,
+      which can be regenerated with <code style="background:#eee;padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:12px">npm run update-data</code>.
+      For Bloomberg Terminal users, prices can be sourced via the Bloomberg BLPAPI
+      <code style="background:#eee;padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:12px">HistoricalDataRequest</code>
+      using the <code>PX_LAST</code> field on the relevant equity tickers.
+    </p>
+
+    <h3 style="margin-top:20px">Alabama Economic Context</h3>
+    <p>
+      Southwest Alabama's metro areas (Birmingham, Huntsville, Montgomery) represent the primary
+      economic centers from which these companies originate. Huntsville has emerged as a major
+      defense and aerospace corridor (ADTRAN, Redstone Arsenal contractors), while Birmingham
+      anchors the state's financial services and healthcare sectors. Warrior Met Coal reflects
+      the state's legacy energy/mining industry.
+    </p>
+  </div>
+</div>
+
+<!-- ─── CONCLUSION ────────────────────────────────────────────────── -->
+<div class="section" id="conclusion">
+  <div class="container">
+    <h2>Conclusion</h2>
+    <p>
+      The Alabama Stock Market Index provides a focused lens on the equity performance of
+      Alabama-headquartered companies relative to the national S&amp;P 500 benchmark.
+      From 2020 to 2022, the index demonstrated resilience across COVID recovery (2020–2021)
+      and the Federal Reserve's rate-tightening cycle (2022), with a beta near 1.0 indicating
+      near-market correlation with slightly differentiated sector exposure.
+    </p>
+    <p>
+      The index is dominated by Financial Services companies, which benefited from rising interest
+      rate spreads in 2022–2023. Warrior Met Coal (HCC) provided significant commodity-linked
+      upside during the 2021 energy commodity rally. ADTRAN's Technology weighting adds
+      diversification from Alabama's growing Huntsville tech corridor.
+    </p>
+    <p>
+      As a leading economic indicator, movements in this index, read alongside labor force,
+      taxable sales, and housing data on the RERI dashboard, help form a more complete picture
+      of Alabama's regional economic trajectory. The index will be updated as new companies
+      meeting the screening criteria become publicly traded.
+    </p>
+  </div>
+</div>
+
+<!-- ─── FOOTER ────────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <strong>Alabama Regional Economic Research Institute</strong><br>
+      Regional Economic Indicators Dashboard<br>
+      Data sourced from Yahoo Finance &amp; SEC EDGAR<br>
+      Index methodology consistent with FGCU/RERI SWFL Stock Index (IBS: 2023-08)
+    </div>
+    <div>
+      <strong>Data Disclaimer</strong><br>
+      This index is for informational and research purposes only.<br>
+      It does not constitute investment advice.<br>
+      Past performance is not indicative of future results.
+    </div>
+  </div>
+</footer>
+
+<!-- ─── SCRIPTS ───────────────────────────────────────────────────── -->
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────
+const DATA_URL = "../data/al_index_data.json";
+
+// ─── STATE ────────────────────────────────────────────────────────────
+let indexChart = null;
+let betaChart  = null;
+let appData    = null;
+
+// ─── INIT ─────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  fetchAndRender(DATA_URL);
+});
+
+async function fetchAndRender(url) {
+  showLoading(true);
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    appData = data;
+    render(data);
+  } catch (err) {
+    showError(`Could not load index data: ${err.message}. Make sure the site is being served over HTTP and run npm run update-data to generate the latest snapshot.`);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ─── RENDER ────────────────────────────────────────────────────────────
+function render(d) {
+  // Status bar
+  document.getElementById("last-updated").textContent = `Last updated: ${d.last_updated}`;
+  if (d.data_source) document.getElementById("data-source").textContent = d.data_source;
+
+  // Stat cards
+  const alCurrent = d.al_index[d.al_index.length - 1];
+  const spCurrent = d.sp500[d.sp500.length  - 1];
+  document.getElementById("stat-al-current").textContent = alCurrent?.toFixed(2) ?? "—";
+  document.getElementById("stat-sp-current").textContent = spCurrent?.toFixed(2) ?? "—";
+  document.getElementById("stat-beta").textContent       = d.beta ?? "—";
+
+  if (d.geo_mean?.al != null) {
+    const geo = d.geo_mean.al;
+    document.getElementById("stat-geo").textContent    = `${geo.toFixed(2)}%`;
+    document.getElementById("stat-geo-sub").textContent = `vs. S&P 500: ${d.geo_mean.sp?.toFixed(2) ?? "—"}%`;
+  }
+
+  // Chart
+  renderIndexChart(d);
+  renderBetaChart(d);
+
+  // Tables
+  renderMilestoneTable(d.milestones);
+  renderReturnsTable(d.ann_returns, d.geo_mean);
+  renderCompositionTable(d.companies);
+  renderSectorBars(d.sectors);
+
+  // Beta
+  const beta = d.beta;
+  document.getElementById("beta-display").textContent = beta ?? "—";
+  document.getElementById("beta-interpretation").innerHTML = betaText(beta);
+}
+
+// ─── CHARTS ────────────────────────────────────────────────────────────
+function renderIndexChart(d) {
+  const ctx = document.getElementById("indexChart").getContext("2d");
+  if (indexChart) indexChart.destroy();
+
+  // Thin data to ~500 points for performance
+  const step = Math.max(1, Math.floor(d.dates.length / 500));
+  const labels = d.dates.filter((_,i) => i % step === 0);
+  const alData = d.al_index.filter((_,i) => i % step === 0);
+  const spData = d.sp500.filter((_,i) => i % step === 0);
+
+  indexChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Alabama Index",
+          data: alData,
+          borderColor: "#9E1B32",
+          backgroundColor: "rgba(158,27,50,0.08)",
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.2,
+        },
+        {
+          label: "S&P 500",
+          data: spData,
+          borderColor: "#1B2A3B",
+          backgroundColor: "rgba(27,42,59,0.06)",
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            maxTicksLimit: 10,
+            font: { family: "'IBM Plex Mono', monospace", size: 11 },
+          },
+          grid: { color: "rgba(0,0,0,.06)" },
+        },
+        y: {
+          ticks: {
+            font: { family: "'IBM Plex Mono', monospace", size: 11 },
+            callback: v => v.toFixed(0),
+          },
+          grid: { color: "rgba(0,0,0,.06)" },
+          title: { display: true, text: "Index Value (Base = 100)", font: { size: 12 } },
+        },
+      },
+    },
+  });
+}
+
+function renderBetaChart(d) {
+  // Build scatter from al_index and sp500 daily returns
+  const al = d.al_index;
+  const sp = d.sp500;
+  const pts = [];
+  const step = Math.max(1, Math.floor(al.length / 400));
+  for (let i = step; i < al.length; i += step) {
+    if (al[i-step] && sp[i-step]) {
+      pts.push({
+        x: parseFloat(((sp[i]/sp[i-step] - 1)*100).toFixed(3)),
+        y: parseFloat(((al[i]/al[i-step] - 1)*100).toFixed(3)),
+      });
+    }
+  }
+
+  const ctx = document.getElementById("betaChart").getContext("2d");
+  if (betaChart) betaChart.destroy();
+
+  betaChart = new Chart(ctx, {
+    type: "scatter",
+    data: {
+      datasets: [{
+        label: "Daily Returns",
+        data: pts,
+        backgroundColor: "rgba(158,27,50,0.35)",
+        pointRadius: 3,
+        pointHoverRadius: 5,
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `Market: ${ctx.parsed.x.toFixed(2)}%, AL: ${ctx.parsed.y.toFixed(2)}%`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: "S&P 500 Daily Return (%)", font: { size: 12 } },
+          ticks: { font: { family: "'IBM Plex Mono', monospace", size: 11 } },
+          grid: { color: "rgba(0,0,0,.06)" },
+        },
+        y: {
+          title: { display: true, text: "AL Index Daily Return (%)", font: { size: 12 } },
+          ticks: { font: { family: "'IBM Plex Mono', monospace", size: 11 } },
+          grid: { color: "rgba(0,0,0,.06)" },
+        },
+      },
+    },
+  });
+}
+
+// ─── TABLES ─────────────────────────────────────────────────────────────
+function renderMilestoneTable(rows) {
+  const tbody = document.getElementById("milestone-body");
+  if (!rows?.length) { tbody.innerHTML = noData(4); return; }
+
+  tbody.innerHTML = rows.map(r => {
+    const spread = r.al != null && r.sp != null ? (r.al - r.sp).toFixed(2) : "—";
+    const cls    = r.al != null && r.sp != null ? (r.al >= r.sp ? "pos" : "neg") : "";
+    return `<tr>
+      <td><strong>${r.date}</strong></td>
+      <td class="mono">${r.al ?? "—"}</td>
+      <td class="mono">${r.sp ?? "—"}</td>
+      <td class="mono ${cls}">${spread !== "—" ? (spread > 0 ? "+" : "") + spread : "—"}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderReturnsTable(rows, geo) {
+  const tbody = document.getElementById("returns-body");
+  const tfoot = document.getElementById("returns-foot");
+  if (!rows?.length) { tbody.innerHTML = noData(4); return; }
+
+  tbody.innerHTML = rows.map(r => {
+    const diff = r.al != null && r.sp != null ? (r.al - r.sp).toFixed(2) : "—";
+    const diffCls = diff !== "—" ? (parseFloat(diff) >= 0 ? "pos" : "neg") : "";
+    return `<tr>
+      <td><strong>${r.year}</strong></td>
+      <td class="mono ${r.al >= 0 ? "pos" : "neg"}">${r.al != null ? (r.al>=0?"+":"") + r.al + "%" : "—"}</td>
+      <td class="mono ${r.sp >= 0 ? "pos" : "neg"}">${r.sp != null ? (r.sp>=0?"+":"") + r.sp + "%" : "—"}</td>
+      <td class="mono ${diffCls}">${diff !== "—" ? (parseFloat(diff)>=0?"+":"") + diff + "pp" : "—"}</td>
+    </tr>`;
+  }).join("");
+
+  if (geo?.al != null) {
+    tfoot.innerHTML = `<tr style="background:#f5f5f3;font-weight:600">
+      <td>Avg. Annual Return (Geometric, 2020–2022)</td>
+      <td class="mono ${geo.al>=0?"pos":"neg"}">${geo.al>=0?"+":""}${geo.al}%</td>
+      <td class="mono ${geo.sp>=0?"pos":"neg"}">${geo.sp>=0?"+":""}${geo.sp}%</td>
+      <td class="mono ${(geo.al-geo.sp)>=0?"pos":"neg"}">${(geo.al-geo.sp)>=0?"+":""}${(geo.al - geo.sp).toFixed(2)}pp</td>
+    </tr>`;
+  }
+}
+
+function renderCompositionTable(companies) {
+  const tbody = document.getElementById("composition-body");
+  if (!companies?.length) { tbody.innerHTML = noData(9); return; }
+
+  tbody.innerHTML = companies.map(c => {
+    const fmt = v => v != null ? `<span class="${v>=0?"pos":"neg"}">${v>=0?"+":""}${v}%</span>` : "—";
+    return `<tr>
+      <td class="ticker-col">${c.ticker}</td>
+      <td>${c.name}</td>
+      <td><span style="font-size:12px;background:#f0f0ee;padding:2px 8px;border-radius:20px">${c.sector}</span></td>
+      <td>${c.city}</td>
+      <td class="mono">$${c.price ?? "—"}</td>
+      <td class="mono">${c.weight != null ? c.weight + "%" : "—"}</td>
+      <td class="mono">${fmt(c.ret2020)}</td>
+      <td class="mono">${fmt(c.ret2021)}</td>
+      <td class="mono">${fmt(c.ret2022)}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderSectorBars(sectors) {
+  const wrap = document.getElementById("sector-bars");
+  if (!sectors || !Object.keys(sectors).length) { wrap.innerHTML = "No sector data."; return; }
+
+  const colors = {
+    "Financial Services": "#9E1B32",
+    "Materials": "#1B2A3B",
+    "Healthcare": "#C8A96E",
+    "Energy": "#4a7c59",
+    "Technology": "#2563eb",
+  };
+
+  wrap.innerHTML = Object.entries(sectors).map(([name, pct]) =>
+    `<div class="sector-row">
+      <div class="sector-name">${name}</div>
+      <div class="sector-bar-wrap">
+        <div class="sector-bar" style="width:${pct}%;background:${colors[name]||"#888"}"></div>
+      </div>
+      <div class="sector-pct">${pct}%</div>
+    </div>`
+  ).join("");
+}
+
+// ─── BETA TEXT ────────────────────────────────────────────────────────
+function betaText(beta) {
+  if (beta == null) return "<p>Beta data unavailable.</p>";
+  let interpretation;
+  if (beta < 0.8)
+    interpretation = "The Alabama Index exhibits <strong>lower volatility</strong> than the market. It tends to rise less in bull markets but also decline less in downturns, consistent with its financial-services concentration.";
+  else if (beta <= 1.05)
+    interpretation = "The Alabama Index shows <strong>near-market correlation</strong> — it moves broadly in line with the S&amp;P 500. This indicates that Alabama's publicly traded corporate sector is closely tied to national economic cycles.";
+  else
+    interpretation = "The Alabama Index exhibits <strong>higher volatility</strong> than the market, amplifying both upside and downside relative to the S&amp;P 500. This may reflect concentrated sector exposure or smaller constituent market caps.";
+
+  return `<p>${interpretation}</p>
+    <p style="margin-top:12px">A beta of <strong>${beta}</strong> implies that for every 1% move in the S&amp;P 500,
+    the Alabama Index is expected to move approximately <strong>${beta}%</strong> in the same direction,
+    holding all other factors constant.</p>`;
+}
+
+// ─── UTILITIES ────────────────────────────────────────────────────────
+function noData(cols) {
+  return `<tr><td colspan="${cols}" style="text-align:center;padding:20px;color:#999">No data available.</td></tr>`;
+}
+function showLoading(v) {
+  document.getElementById("loading").classList.toggle("hidden", !v);
+}
+function showError(msg) {
+  const el = document.getElementById("error-banner");
+  el.style.display = "block";
+  el.textContent = "⚠️  " + msg;
+}
+</script>
+
+</body>
+</html>

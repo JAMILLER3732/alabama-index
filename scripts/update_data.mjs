@@ -1,311 +1,289 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import YahooFinance from "yahoo-finance2";
+/**
+ * Alabama Stock Index (ALSI) — Data Updater
+ * ==========================================
+ * Fetches daily historical prices for all 9 ALSI constituents and the
+ * S&P 500 benchmark via Yahoo Finance, computes the Price-Weighted Index,
+ * and writes the result to data/al_index_data.json.
+ *
+ * Usage:
+ *   node scripts/update_data.mjs
+ *
+ * Run automatically by GitHub Actions on weekday evenings after market close.
+ */
+
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import YahooFinance from 'yahoo-finance2';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, "..");
-const OUTPUT = path.join(ROOT_DIR, "data", "al_index_data.json");
-const BASE_DATE = "2020-01-02";
-const BENCHMARK = "^GSPC";
-const yahooFinance = new YahooFinance({ suppressNotices: ["ripHistorical"] });
+const __dirname  = path.dirname(__filename);
+const ROOT_DIR   = path.resolve(__dirname, '..');
+const OUTPUT     = path.join(ROOT_DIR, 'data', 'al_index_data.json');
 
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const BASE_DATE  = '2020-01-02';   // Index = 100 on this date
+const BENCHMARK  = '^GSPC';        // S&P 500
+
+/**
+ * ALSI Constituents — 9 publicly traded companies headquartered in Alabama.
+ * Price-Weighted Index methodology (consistent with DJIA & FGCU/RERI SWFL Index).
+ */
 const AL_INDEX = {
-  RF: { name: "Regions Financial Corporation", sector: "Financial Services", city: "Birmingham" },
-  VMC: { name: "Vulcan Materials Company", sector: "Materials", city: "Birmingham" },
-  EHC: { name: "Encompass Health Corporation", sector: "Healthcare", city: "Birmingham" },
-  HCC: { name: "Warrior Met Coal, Inc.", sector: "Energy", city: "Brookwood" },
-  PRA: { name: "ProAssurance Corporation", sector: "Financial Services", city: "Birmingham" },
-  ADTN: { name: "ADTRAN Holdings, Inc.", sector: "Technology", city: "Huntsville" },
-  SFBS: { name: "ServisFirst Bancshares, Inc.", sector: "Financial Services", city: "Birmingham" }
+  EHC:  { name: 'Encompass Health Corp',      sector: 'Healthcare',        city: 'Birmingham' },
+  RF:   { name: 'Regions Financial Corp',     sector: 'Financial Services', city: 'Birmingham' },
+  VMC:  { name: 'Vulcan Materials Company',   sector: 'Materials',          city: 'Birmingham' },
+  MPW:  { name: 'Medical Properties Trust',  sector: 'Real Estate',        city: 'Birmingham' },
+  ADTN: { name: 'ADTRAN Holdings',            sector: 'Technology',         city: 'Huntsville' },
+  ROAD: { name: 'Construction Partners Inc',  sector: 'Industrials',        city: 'Dothan'     },
+  HCC:  { name: 'Warrior Met Coal Inc',       sector: 'Materials',          city: 'Brookwood'  },
+  TBRG: { name: 'TruBridge Inc',             sector: 'Health Technology',   city: 'Mobile'     },
+  LAKE: { name: 'Lakeland Industries Inc',    sector: 'Consumer Goods',      city: 'Huntsville' },
 };
 
-const round2 = (value) => Number(value.toFixed(2));
-const isFiniteNumber = (value) => typeof value === "number" && Number.isFinite(value);
-const toDateKey = (value) => new Date(value).toISOString().slice(0, 10);
+// ─── UTILITIES ───────────────────────────────────────────────────────────────
+const round2     = v => Number(v.toFixed(2));
+const isFinite_  = v => typeof v === 'number' && Number.isFinite(v);
+const toDateKey  = v => new Date(v).toISOString().slice(0, 10);
 
-async function fetchHistory(symbol) {
-  const rows = await yahooFinance.historical(symbol, {
-    period1: BASE_DATE,
-    period2: new Date(),
-    interval: "1d"
-  });
+const yahooFinance = new YahooFinance({ suppressNotices: ['ripHistorical'] });
 
-  return rows
-    .map((row) => ({
-      date: toDateKey(row.date),
-      close: Number(row.adjClose ?? row.close)
-    }))
-    .filter((row) => isFiniteNumber(row.close))
-    .sort((left, right) => left.date.localeCompare(right.date));
-}
-
-function annualReturn(series, year) {
-  const yearPrefix = String(year);
-  const values = series
-    .filter((entry) => entry.date.startsWith(yearPrefix) && isFiniteNumber(entry.value))
-    .map((entry) => entry.value);
-
-  if (values.length < 2) {
-    return null;
-  }
-
-  return round2(((values.at(-1) / values[0]) - 1) * 100);
-}
-
-function geometricMeanReturn(values) {
-  const valid = values.filter((value) => isFiniteNumber(value));
-  if (!valid.length) {
-    return null;
-  }
-
-  const product = valid.reduce((accumulator, value) => accumulator * (1 + value / 100), 1);
-  return round2((product ** (1 / valid.length) - 1) * 100);
-}
-
-function mean(values) {
-  return values.reduce((accumulator, value) => accumulator + value, 0) / values.length;
-}
-
-function variance(values) {
-  if (values.length < 2) {
-    return null;
-  }
-
-  const average = mean(values);
-  const total = values.reduce((accumulator, value) => accumulator + ((value - average) ** 2), 0);
-  return total / (values.length - 1);
-}
-
-function covariance(left, right) {
-  if (left.length !== right.length || left.length < 2) {
-    return null;
-  }
-
-  const leftMean = mean(left);
-  const rightMean = mean(right);
-  const total = left.reduce((accumulator, value, index) => {
-    return accumulator + ((value - leftMean) * (right[index] - rightMean));
-  }, 0);
-
-  return total / (left.length - 1);
-}
-
-function buildFilledSeries(histories) {
-  const symbols = Object.keys(histories);
-  const dateSet = new Set();
-
-  for (const rows of Object.values(histories)) {
-    for (const row of rows) {
-      dateSet.add(row.date);
+// ─── FETCH ───────────────────────────────────────────────────────────────────
+async function fetchHistory(symbol, retries = 3) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const rows = await yahooFinance.historical(symbol, {
+        period1: BASE_DATE,
+        period2: new Date(),
+        interval: '1d',
+      });
+      const result = rows
+        .map(r => ({ date: toDateKey(r.date), close: Number(r.adjClose ?? r.close) }))
+        .filter(r => isFinite_(r.close))
+        .sort((a, b) => a.date.localeCompare(b.date));
+      console.log(`  ✓ ${symbol.padEnd(6)} — ${result.length} trading days`);
+      return result;
+    } catch (err) {
+      const wait = 2000 * (attempt + 1);
+      console.warn(`  ⚠ ${symbol} retry ${attempt + 1}/${retries}: ${err.message}`);
+      if (attempt < retries - 1) await new Promise(r => setTimeout(r, wait));
     }
   }
+  console.error(`  ✗ ${symbol} failed after ${retries} retries — skipping`);
+  return [];
+}
 
-  const dates = Array.from(dateSet).sort();
-  const historyMaps = Object.fromEntries(
-    symbols.map((symbol) => [symbol, new Map(histories[symbol].map((row) => [row.date, row.close]))])
-  );
+// ─── BUILD UNIFIED SERIES (forward-fill missing days) ────────────────────────
+function buildFilledSeries(histories) {
+  const symbols  = Object.keys(histories);
+  const dateSet  = new Set();
+  for (const rows of Object.values(histories)) rows.forEach(r => dateSet.add(r.date));
+  const dates    = [...dateSet].sort();
+  const maps     = Object.fromEntries(symbols.map(s => [s, new Map(histories[s].map(r => [r.date, r.close]))]));
   const lastSeen = {};
-  const seriesBySymbol = Object.fromEntries(symbols.map((symbol) => [symbol, []]));
+  const series   = Object.fromEntries(symbols.map(s => [s, []]));
 
   for (const date of dates) {
-    for (const symbol of symbols) {
-      if (historyMaps[symbol].has(date)) {
-        lastSeen[symbol] = historyMaps[symbol].get(date);
-      }
-
-      seriesBySymbol[symbol].push({
-        date,
-        value: lastSeen[symbol] ?? null
-      });
+    for (const sym of symbols) {
+      if (maps[sym].has(date)) lastSeen[sym] = maps[sym].get(date);
+      series[sym].push({ date, value: lastSeen[sym] ?? null });
     }
   }
-
-  return { dates, seriesBySymbol };
+  return { dates, seriesBySymbol: series };
 }
 
-function buildIndexSeries(filledSeries) {
-  const tickerSymbols = Object.keys(AL_INDEX);
-  const benchmarkSeries = filledSeries.seriesBySymbol[BENCHMARK];
-  const rows = [];
+// ─── COMPUTE PWI INDEX ───────────────────────────────────────────────────────
+/**
+ * Price-Weighted Index:
+ *   PWI(t) = Σ(Stock Prices at t) / Divisor
+ *   Divisor = Σ(Stock Prices on BASE_DATE) / 100
+ * So PWI = 100 on BASE_DATE by construction.
+ */
+function buildIndexSeries(filled) {
+  const tickers  = Object.keys(AL_INDEX);
+  const spSeries = filled.seriesBySymbol[BENCHMARK];
+  const rows     = [];
 
-  for (let index = 0; index < filledSeries.dates.length; index += 1) {
-    const alValues = tickerSymbols
-      .map((ticker) => filledSeries.seriesBySymbol[ticker][index].value)
-      .filter(isFiniteNumber);
-    const benchmarkValue = benchmarkSeries[index].value;
-
-    if (!alValues.length || !isFiniteNumber(benchmarkValue)) {
-      continue;
-    }
-
-    rows.push({
-      date: filledSeries.dates[index],
-      alRaw: mean(alValues),
-      spRaw: benchmarkValue
-    });
+  for (let i = 0; i < filled.dates.length; i++) {
+    const prices   = tickers.map(t => filled.seriesBySymbol[t][i].value).filter(isFinite_);
+    const spPrice  = spSeries[i].value;
+    if (!prices.length || !isFinite_(spPrice)) continue;
+    rows.push({ date: filled.dates[i], alSum: prices.reduce((a, b) => a + b, 0), nValid: prices.length, spRaw: spPrice });
   }
 
-  const alBase = rows[0]?.alRaw;
-  const spBase = rows[0]?.spRaw;
+  // Find base date values
+  const baseRow = rows.find(r => r.date === BASE_DATE) ?? rows[0];
+  if (!baseRow) throw new Error('No data found on or after base date ' + BASE_DATE);
 
-  return rows.map((row) => ({
-    date: row.date,
-    al: (row.alRaw / alBase) * 100,
-    sp: (row.spRaw / spBase) * 100
+  const alDivisor = baseRow.alSum / 100;           // Σ(prices on base date) / 100
+  const spBase    = baseRow.spRaw;                  // S&P 500 price on base date
+  const nBase     = baseRow.nValid;                 // number of valid tickers on base date
+
+  return rows.map(r => ({
+    date : r.date,
+    // Scale sum so missing tickers don't deflate the index
+    al   : round2((r.alSum * (nBase / r.nValid)) / alDivisor),
+    sp   : round2((r.spRaw / spBase) * 100),
   }));
 }
 
-function buildReturns(indexSeries) {
-  const marketReturns = [];
-  const alReturns = [];
-
-  for (let index = 1; index < indexSeries.length; index += 1) {
-    const previous = indexSeries[index - 1];
-    const current = indexSeries[index];
-
-    if (!previous.al || !previous.sp) {
-      continue;
-    }
-
-    alReturns.push((current.al / previous.al) - 1);
-    marketReturns.push((current.sp / previous.sp) - 1);
-  }
-
-  return { alReturns, marketReturns };
+// ─── ANNUAL RETURNS ──────────────────────────────────────────────────────────
+function annualReturn(series, year) {
+  const rows = series.filter(r => r.date.startsWith(String(year)) && isFinite_(r.value));
+  if (rows.length < 2) return null;
+  return round2(((rows.at(-1).value / rows[0].value) - 1) * 100);
 }
 
-function buildMilestones(indexSeries) {
+function buildAnnReturns(indexSeries) {
+  const alSeries = indexSeries.map(r => ({ date: r.date, value: r.al }));
+  const spSeries = indexSeries.map(r => ({ date: r.date, value: r.sp }));
   const currentYear = new Date().getFullYear();
-  const milestones = [];
-
-  for (let year = 2020; year <= currentYear; year += 1) {
-    const rows = indexSeries.filter((row) => row.date.startsWith(String(year)));
-    if (!rows.length) {
-      continue;
-    }
-
-    milestones.push({
-      date: `Start ${year}`,
-      al: round2(rows[0].al),
-      sp: round2(rows[0].sp)
-    });
-    milestones.push({
-      date: `End ${year}`,
-      al: round2(rows.at(-1).al),
-      sp: round2(rows.at(-1).sp)
-    });
+  const results = [];
+  for (let y = 2020; y <= currentYear; y++) {
+    const al = annualReturn(alSeries, y);
+    const sp = annualReturn(spSeries, y);
+    if (al !== null || sp !== null) results.push({ year: y, al, sp });
   }
+  return results;
+}
 
+// ─── BETA ─────────────────────────────────────────────────────────────────────
+function computeBeta(indexSeries) {
+  const al = [], sp = [];
+  for (let i = 1; i < indexSeries.length; i++) {
+    const p = indexSeries[i - 1], c = indexSeries[i];
+    if (p.al && p.sp && c.al && c.sp) {
+      al.push(c.al / p.al - 1);
+      sp.push(c.sp / p.sp - 1);
+    }
+  }
+  if (al.length < 30) return null;
+  const meanAL = al.reduce((a, b) => a + b, 0) / al.length;
+  const meanSP = sp.reduce((a, b) => a + b, 0) / sp.length;
+  let cov = 0, varSP = 0;
+  for (let i = 0; i < al.length; i++) {
+    cov  += (al[i] - meanAL) * (sp[i] - meanSP);
+    varSP += (sp[i] - meanSP) ** 2;
+  }
+  return varSP === 0 ? null : round2(cov / varSP);
+}
+
+// ─── MILESTONES ───────────────────────────────────────────────────────────────
+function buildMilestones(indexSeries) {
+  const milestones = [];
+  const currentYear = new Date().getFullYear();
+  for (let y = 2020; y <= currentYear; y++) {
+    const rows = indexSeries.filter(r => r.date.startsWith(String(y)));
+    if (!rows.length) continue;
+    milestones.push({ date: `Start ${y}`, al: rows[0].al,       sp: rows[0].sp });
+    milestones.push({ date: `End ${y}`,   al: rows.at(-1).al,   sp: rows.at(-1).sp });
+  }
   return milestones;
 }
 
-function buildCompanies(histories, filledSeries) {
+// ─── COMPANIES ───────────────────────────────────────────────────────────────
+function buildCompanies(histories, filled) {
   const latestPrices = Object.fromEntries(
-    Object.keys(AL_INDEX).map((ticker) => {
-      const series = filledSeries.seriesBySymbol[ticker];
-      const latestValue = series.findLast((entry) => isFiniteNumber(entry.value))?.value ?? null;
-      return [ticker, latestValue];
+    Object.keys(AL_INDEX).map(t => {
+      const series = filled.seriesBySymbol[t];
+      const latest = series?.findLast(e => isFinite_(e.value))?.value ?? null;
+      return [t, latest];
     })
   );
-
-  const totalPrice = Object.values(latestPrices)
-    .filter(isFiniteNumber)
-    .reduce((accumulator, value) => accumulator + value, 0);
+  const totalPrice = Object.values(latestPrices).filter(isFinite_).reduce((a, b) => a + b, 0);
 
   return Object.entries(AL_INDEX).map(([ticker, info]) => {
-    const price = latestPrices[ticker];
-    const history = histories[ticker].map((row) => ({ date: row.date, value: row.close }));
-
+    const price   = latestPrices[ticker];
+    const history = (histories[ticker] ?? []).map(r => ({ date: r.date, value: r.close }));
     return {
       ticker,
-      name: info.name,
-      sector: info.sector,
-      city: info.city,
-      price: isFiniteNumber(price) ? round2(price) : null,
-      weight: totalPrice && isFiniteNumber(price) ? round2((price / totalPrice) * 100) : null,
+      name:    info.name,
+      sector:  info.sector,
+      city:    info.city,
+      price:   isFinite_(price) ? round2(price)  : null,
+      weight:  (totalPrice && isFinite_(price)) ? round2((price / totalPrice) * 100) : null,
       ret2020: annualReturn(history, 2020),
       ret2021: annualReturn(history, 2021),
-      ret2022: annualReturn(history, 2022)
+      ret2022: annualReturn(history, 2022),
+      ret2023: annualReturn(history, 2023),
+      ret2024: annualReturn(history, 2024),
     };
   });
 }
 
+// ─── SECTORS ─────────────────────────────────────────────────────────────────
 function buildSectors(companies) {
   const totals = new Map();
-
-  for (const company of companies) {
-    if (!isFiniteNumber(company.weight)) {
-      continue;
-    }
-
-    totals.set(company.sector, (totals.get(company.sector) ?? 0) + company.weight);
+  for (const c of companies) {
+    if (!isFinite_(c.weight)) continue;
+    totals.set(c.sector, (totals.get(c.sector) ?? 0) + c.weight);
   }
-
   return Object.fromEntries(
-    Array.from(totals.entries())
-      .sort((left, right) => right[1] - left[1])
-      .map(([sector, weight]) => [sector, round2(weight)])
+    [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([s, w]) => [s, round2(w)])
   );
 }
 
+// ─── MAIN ─────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log(`[${new Date().toISOString()}] Fetching Yahoo Finance data...`);
+  console.log('━'.repeat(55));
+  console.log(' Alabama Stock Index (ALSI) — Data Updater');
+  console.log('━'.repeat(55));
+  console.log(` Base date : ${BASE_DATE} = 100`);
+  console.log(` Run time  : ${new Date().toISOString()}\n`);
 
-  const symbols = [...Object.keys(AL_INDEX), BENCHMARK];
+  // 1. Fetch constituent + benchmark data
+  console.log('📡 Fetching constituent prices...');
+  const symbols   = [...Object.keys(AL_INDEX), BENCHMARK];
   const histories = Object.fromEntries(
-    await Promise.all(
-      symbols.map(async (symbol) => [symbol, await fetchHistory(symbol)])
-    )
+    await Promise.all(symbols.map(async sym => [sym, await fetchHistory(sym)]))
   );
 
-  const filledSeries = buildFilledSeries(histories);
-  const indexSeries = buildIndexSeries(filledSeries);
-  const { alReturns, marketReturns } = buildReturns(indexSeries);
-  const annReturns = [];
-  const currentYear = new Date().getFullYear();
+  // 2. Build unified price series (forward-fill gaps)
+  const filled = buildFilledSeries(histories);
+  console.log(`\n📅 Unified trading calendar: ${filled.dates.length} days`);
+  console.log(`   ${filled.dates[0]}  →  ${filled.dates.at(-1)}`);
 
-  for (let year = 2020; year <= currentYear; year += 1) {
-    const al = annualReturn(indexSeries.map((row) => ({ date: row.date, value: row.al })), year);
-    const sp = annualReturn(indexSeries.map((row) => ({ date: row.date, value: row.sp })), year);
-    if (al !== null || sp !== null) {
-      annReturns.push({ year, al, sp });
-    }
-  }
+  // 3. Compute PWI index + S&P 500 normalized
+  console.log('\n⚙️  Computing Price-Weighted Index...');
+  const indexSeries = buildIndexSeries(filled);
+  const currentAL = indexSeries.at(-1)?.al;
+  const currentSP = indexSeries.at(-1)?.sp;
+  console.log(`   ALSI current value : ${currentAL}`);
+  console.log(`   S&P 500 (indexed)  : ${currentSP}`);
 
-  const marketVariance = variance(marketReturns);
-  const beta = marketVariance ? round2(covariance(alReturns, marketReturns) / marketVariance) : null;
-  const companies = buildCompanies(histories, filledSeries);
-  const sectors = buildSectors(companies);
+  // 4. Supporting analytics
+  const annReturns = buildAnnReturns(indexSeries);
+  const beta       = computeBeta(indexSeries);
+  const milestones = buildMilestones(indexSeries);
+  const companies  = buildCompanies(histories, filled);
+  const sectors    = buildSectors(companies);
+  console.log(`   Beta vs S&P 500    : ${beta}`);
+
+  // 5. Assemble payload
   const payload = {
-    dates: indexSeries.map((row) => row.date),
-    al_index: indexSeries.map((row) => round2(row.al)),
-    sp500: indexSeries.map((row) => round2(row.sp)),
-    ann_returns: annReturns,
-    geo_mean: {
-      al: geometricMeanReturn(annReturns.filter((row) => row.year <= 2022).map((row) => row.al)),
-      sp: geometricMeanReturn(annReturns.filter((row) => row.year <= 2022).map((row) => row.sp))
-    },
+    last_updated : new Date().toISOString().replace('T', ' ').slice(0, 19),
+    data_source  : 'Yahoo Finance via yahoo-finance2 (Node.js)',
+    base_date    : BASE_DATE,
+    dates        : indexSeries.map(r => r.date),
+    al_index     : indexSeries.map(r => r.al),
+    sp500        : indexSeries.map(r => r.sp),
+    ann_returns  : annReturns,
     beta,
-    milestones: buildMilestones(indexSeries),
+    milestones,
     companies,
     sectors,
-    last_updated: new Date().toISOString().replace("T", " ").slice(0, 19),
-    data_source: "Yahoo Finance (Snapshot via Node.js)"
   };
 
+  // 6. Write output
   await fs.mkdir(path.dirname(OUTPUT), { recursive: true });
-  await fs.writeFile(OUTPUT, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  await fs.writeFile(OUTPUT, JSON.stringify(payload, null, 2) + '\n', 'utf8');
 
-  console.log(`Saved ${OUTPUT}`);
-  console.log(`AL Index current: ${payload.al_index.at(-1)}`);
-  console.log(`S&P 500 current: ${payload.sp500.at(-1)}`);
-  console.log(`Beta: ${payload.beta}`);
+  console.log(`\n✅ Saved → ${OUTPUT}`);
+  console.log('━'.repeat(55));
 }
 
-main().catch((error) => {
-  console.error("Failed to build data snapshot.");
-  console.error(error);
+main().catch(err => {
+  console.error('\n❌ Fatal error:', err.message);
+  console.error(err);
   process.exitCode = 1;
 });
